@@ -1,0 +1,75 @@
+package com.example.fortune_whell_v3.api.models
+
+data class Setup(
+    val Maquinas_numeroSerie: String,
+
+    //Valor do Premio
+    val P0: Float,
+    val P1: Float,
+    val P2: Float,
+    val P3: Float,
+    val P4: Float,
+    val P5: Float,
+    val P6: Float,
+    val P7: Float,
+    val P8: Float,
+    val P9: Float,
+    val P10: Float,
+    val P11: Float,
+    val P12: Float,
+    val P13: Float,
+    val P14: Float,
+    val P15: Float,
+
+    //Label
+    val L0: String,
+    val L1: String,
+    val L2: String,
+    val L3: String,
+    val L4: String,
+    val L5: String,
+    val L6: String,
+    val L7: String,
+    val L8: String,
+    val L9: String,
+    val L10: String,
+    val L11: String,
+    val L12: String,
+    val L13: String,
+    val L14: String,
+    val L15: String,
+
+    //Cor
+    val C0: String,
+    val C1: String,
+    val C2: String,
+    val C3: String,
+    val C4: String,
+    val C5: String,
+    val C6: String,
+    val C7: String,
+    val C8: String,
+    val C9: String,
+    val C10: String,
+    val C11: String,
+    val C12: String,
+    val C13: String,
+    val C14: String,
+    val C15: String,
+
+    //Brinde
+    val brinde_am: String,
+    val brinde_az: String,
+    val brinde_bb: String,
+    val brinde_ci: String,
+    val brinde_ee: String,
+    val brinde_gm: String,
+    val brinde_lr: String,
+    val brinde_pc: String,
+    val brinde_pt: String,
+    val brinde_rx: String,
+    val brinde_vd: String,
+    val brinde_vr: String,
+    val brinde_arc: String
+
+)

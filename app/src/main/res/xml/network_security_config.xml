@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+
+    <!-- Permitir HTTP para o teu servidor real -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">sabedoriariasistemica.com</domain>
+    </domain-config>
+
+</network-security-config>
+
