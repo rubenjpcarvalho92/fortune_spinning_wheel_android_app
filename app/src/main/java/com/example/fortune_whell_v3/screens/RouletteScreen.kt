@@ -81,6 +81,8 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
     var maquina by remember { mutableStateOf<Maquina?>(null) }
     var showPopupLevantamento by remember { mutableStateOf(false) }
     val bleMessage by bleViewModel.bleMessage.collectAsState()
+    var inputValue by remember { mutableStateOf("") }
+
 
 
     val levantamentoEmCurso = remember { mutableStateOf(false) }
@@ -249,7 +251,7 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                         modifier = Modifier.fillMaxSize()
                     )
                     Text(
-                        text = creditValue.toString(),
+                        text = (inputValue.toIntOrNull() ?: creditValue).toString(),
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
                         fontSize = 42.sp,
@@ -437,10 +439,13 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
         }
         // 🔹 Pop-up Método de Pagamento 2
         if (showPopupPayment2) {
-            bleViewModel.sendMessage("MOEDA|ON")  // Envia sinal ao ESP32 para habilitar o moedeiro
-
-            var inputValue by remember { mutableStateOf("") }
-            val isValidInput = inputValue.toIntOrNull()?.let { it in 1..10 } ?: false
+            // ✅ Só liga o moedeiro uma vez
+            LaunchedEffect(showPopupPayment2) {
+                if (showPopupPayment2) {
+                    bleViewModel.sendMessage("MOEDA|ON")
+                    Log.d("BLE", "🟢 Moedeiro ligado")
+                }
+            }
 
             Box(
                 modifier = Modifier
@@ -461,27 +466,36 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                         fontWeight = FontWeight.Bold
                     )
 
-                    // 🔹 Caixa de texto para inserir um número entre 1 e 10
+                    // ✅ Campo de entrada para moedas
                     TextField(
                         value = inputValue,
-                        onValueChange = { inputValue = it.filter { char -> char.isDigit() } },
+                        onValueChange = {
+                            inputValue = it.filter { char -> char.isDigit() }
+
+                            val parsed = inputValue.toIntOrNull() ?: 0
+                            if (parsed >= 10) {
+                                bleViewModel.sendMessage("MOEDA|OFF")
+                                Log.d("BLE", "⛔ Moedeiro desligado (input >= 10): $parsed")
+                            }
+                        },
                         singleLine = true,
                         placeholder = { Text("Digite um valor (1-10)") }
                     )
 
-                    // 🔹 Botões "Jogar" e "Voltar" lado a lado
+                    // ✅ Botões dinâmicos
+                    val parsedValue = inputValue.toIntOrNull() ?: 0
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        // 🔹 Só exibe o botão "Jogar" se o valor for válido
-                        if (isValidInput) {
+                        if (parsedValue in 1..11) {
                             Button(
                                 onClick = {
-                                    creditValue = inputValue.toIntOrNull() ?: 0 // Define o valor no contador
+                                    creditValue = parsedValue
+                                    slotCount = parsedValue
                                     showPopupPayment2 = false
                                     showPopupPayment = false
-                                    slotCount=creditValue
                                 },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color.Black,
@@ -492,23 +506,25 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                             }
                         }
 
-                        // 🔹 Botão "Voltar" para retornar ao pop-up do método de pagamento
-                        Button(
-                            onClick = {
-                                showPopupPayment2 = false
-                                showPopupPayment = true
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Black,
-                                contentColor = Color(0xFFDAA520)
-                            )
-                        ) {
-                            Text("Voltar", color = Color(0xFFDAA520))
+                        if (parsedValue == 0) {
+                            Button(
+                                onClick = {
+                                    showPopupPayment2 = false
+                                    showPopupPayment = true
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Black,
+                                    contentColor = Color(0xFFDAA520)
+                                )
+                            ) {
+                                Text("Voltar", color = Color(0xFFDAA520))
+                            }
                         }
                     }
                 }
             }
         }
+
         // Pop up com a grelha de prémios
         if (showPopupPrizes) {
             //chamada da funcão para grelha de premios no menu dos premios, deverá ser dinâmica
@@ -877,6 +893,12 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
             }
         }
     }
+    LaunchedEffect(creditValue) {
+        if (creditValue > 10) {
+            bleViewModel.sendMessage("MOEDA|OFF")
+        }
+    }
+
 
     LaunchedEffect(bleMessage) {
         val msg = bleMessage ?: return@LaunchedEffect
