@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.provider.Settings
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,11 +35,14 @@ fun DeviceInfoScreen(
     val setup = maquinaViewModel.setup
 
     // ✅ Só tenta ligar se ainda não estiver ligado (independentemente de maquina/setup)
-    LaunchedEffect(isConnected) {
-        if (!isConnected) {
-            bleViewModel.connectToMac(macAddress)
+    LaunchedEffect(maquina?.MACArduino, isConnected) {
+        val mac = maquina?.MACArduino
+        if (mac != null && !isConnected) {
+            bleViewModel.connectToMac(mac)
+            Log.d("BLE", "🔌 A tentar ligar ao MAC: $mac")
         }
     }
+
 
     Column(
         modifier = Modifier

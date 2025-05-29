@@ -104,11 +104,6 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
         }
     }
 
-    fun handleExitWithBLE() {
-        Log.d("BLE", "A sair ")
-    }
-
-
     Box(modifier = Modifier.fillMaxSize()) {
         // Fundo da tela
 
@@ -287,11 +282,13 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                                     numeroSerie = numeroSerie,
                                     prizeListToPrint = prizeListToPrint,
                                     levantamentoEmCurso = levantamentoEmCurso,
-                                    esperandoConfirmacaoArduino = esperandoConfirmacaoArduino
-                                ) {
-                                    showPopupLevantamento = false
-                                    navController.navigate("main") // 🔁 Volta ao ecrã principal após desaparecer popup
-                                }
+                                    esperandoConfirmacaoArduino = esperandoConfirmacaoArduino,
+                                    numeroTalao = talaoCriado!!.numeroSerie,
+                                    onLevantamentoTerminado = {
+                                        showPopupLevantamento = false
+                                        navController.navigate("main") // 🔁 Volta ao ecrã principal após desaparecer popup
+                                    }
+                                )
                             }
                         }
                     }
@@ -493,6 +490,7 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                             Button(
                                 onClick = {
                                     creditValue = parsedValue
+                                    inputValue = "" // ← limpa o campo de texto
                                     slotCount = parsedValue
                                     showPopupPayment2 = false
                                     showPopupPayment = false

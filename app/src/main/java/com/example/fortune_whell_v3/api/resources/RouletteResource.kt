@@ -199,15 +199,24 @@ object RouletteResource {
             else -> 0  // de 337.5f a 360f
         }
     }
-    suspend fun realizarLevantamentoFinal(bleViewModel: BLEViewModel, numeroSerie: String, prizeListToPrint: SnapshotStateList<String>, levantamentoEmCurso: MutableState<Boolean>, esperandoConfirmacaoArduino: MutableState<Boolean>, onLevantamentoTerminado: () -> Unit) {
+    suspend fun realizarLevantamentoFinal(
+        bleViewModel: BLEViewModel,
+        numeroSerie: String,
+        prizeListToPrint: SnapshotStateList<String>,
+        levantamentoEmCurso: MutableState<Boolean>,
+        esperandoConfirmacaoArduino: MutableState<Boolean>,
+        onLevantamentoTerminado: () -> Unit,
+        numeroTalao: String,
+    ) {
         if (levantamentoEmCurso.value || prizeListToPrint.isEmpty()) return
         levantamentoEmCurso.value = true
 
         try {
-            val data = prizeListToPrint.joinToString(":") + ":PRINTER"
-            Log.d("LEVANTAMENTO", "📦 Enviando para BLE: $data")
+            val dados = prizeListToPrint.joinToString(":")
+            val comando = "TALAO|PRINT|$numeroTalao|$dados"
+            Log.d("LEVANTAMENTO", "📦 Enviando comando BLE: $comando")
 
-            bleViewModel.sendMessage(data)
+            bleViewModel.sendMessage(comando)
             esperandoConfirmacaoArduino.value = true
 
             val resposta = try {
@@ -221,8 +230,7 @@ object RouletteResource {
 
             if (resposta == "OK") {
                 try {
-                    val premios = prizeListToPrint.filter { it != "PRINTER" }
-                    val mapaPremios = premios.groupingBy { it }.eachCount()
+                    val mapaPremios = prizeListToPrint.groupingBy { it }.eachCount()
 
                     val stockAtual = try {
                         APIResource.buscarStock(numeroSerie)
@@ -245,7 +253,7 @@ object RouletteResource {
                     Log.e("LEVANTAMENTO", "❌ Erro durante o processamento de levantamento: ${e.message}")
                 }
             } else {
-                Log.e("LEVANTAMENTO", "❌ Erro na impressão. Resposta: $resposta")
+                Log.e("LEVANTAMENTO", "❌ Impressão falhou. Resposta: $resposta")
             }
 
         } catch (e: Exception) {
@@ -255,6 +263,7 @@ object RouletteResource {
             levantamentoEmCurso.value = false
         }
     }
+
 
 
 }
