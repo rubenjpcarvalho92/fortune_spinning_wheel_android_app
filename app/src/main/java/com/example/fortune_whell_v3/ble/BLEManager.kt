@@ -63,9 +63,10 @@ class BLEManager(private val context: Context) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             return
         }
+        Log.d("BLEManager", "✅ A enviar dados: $message")
         val data = message.toByteArray(Charsets.UTF_8)
         bluetoothGatt?.let { gatt ->
-            txCharacteristic?.let { characteristic ->
+            rxCharacteristic?.let { characteristic ->
                 gatt.writeCharacteristic(characteristic, data, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
             }
         }
