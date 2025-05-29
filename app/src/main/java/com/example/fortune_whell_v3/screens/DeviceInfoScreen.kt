@@ -5,7 +5,6 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.provider.Settings
-import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,57 +16,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
-import com.example.fortune_whell_v3.api.models.Maquina
-import com.example.fortune_whell_v3.api.resources.APIResource
-import kotlinx.coroutines.launch
+import com.example.bleproject.viewmodel.BLEViewModel
+import com.example.fortune_whell_v3.viewmodel.MaquinaViewModel
 
 @Composable
 fun DeviceInfoScreen(
     navController: NavController,
+    maquinaViewModel: MaquinaViewModel,
+    bleViewModel: BLEViewModel
 ) {
     val context = LocalContext.current
+    val serialNumber = getTabletSerialNumber(context)
+    val macAddress = "3C:8A:1F:B0:07:D2"
 
-    var serialNumber by remember { mutableStateOf("") }
-    var macAddress by remember { mutableStateOf("") }
+    val isConnected by bleViewModel.isConnected.collectAsState()
+    val maquina = maquinaViewModel.maquina
+    val setup = maquinaViewModel.setup
 
-    var maquina by remember { mutableStateOf<Maquina?>(null) }
-    var erro by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
-
-    val coroutineScope = rememberCoroutineScope()
-
-    fun atualizarMaquina() {
-        coroutineScope.launch {
-            isLoading = true
-            erro = false
-
-            serialNumber = getTabletSerialNumber(context)
-            macAddress = getArduinoMacAddress(context) ?: "Não encontrado"
-
-            Log.d("DeviceInfoScreen", "Buscando máquina com SN: $serialNumber")
-
-            val resultado = APIResource.buscarDadosMaquinaRolleta(serialNumber)
-
-            if (resultado != null) {
-                Log.d("DeviceInfoScreen", "Máquina encontrada: ${resultado.numeroSerie}, Status: ${resultado.status}")
-                maquina = resultado
-
-                // 👉 Navega para login automaticamente
-                navController.navigate("login") {
-                    popUpTo("device_info") { inclusive = true }
-                }
-            } else {
-                Log.e("DeviceInfoScreen", "Erro: máquina não encontrada ou falha de conexão")
-                erro = true
-            }
-
-            isLoading = false
+    // ✅ Só tenta ligar se ainda não estiver ligado (independentemente de maquina/setup)
+    LaunchedEffect(isConnected) {
+        if (!isConnected) {
+            bleViewModel.connectToMac(macAddress)
         }
-    }
-
-    // Primeira chamada
-    LaunchedEffect(Unit) {
-        atualizarMaquina()
     }
 
     Column(
@@ -77,26 +47,33 @@ fun DeviceInfoScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Só mostra SN e MAC se a máquina NÃO foi encontrada
-        if (maquina == null && !isLoading) {
-            Text("SN do Tablet", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text(serialNumber, fontSize = 16.sp)
+        Text("Status BLE: ${if (isConnected) "✅ Conectado" else "❌ Não conectado"}")
 
-            Text("MAC do Arduino", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text(macAddress, fontSize = 16.sp)
-        }
+        Text("SN do Tablet", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(serialNumber, fontSize = 16.sp)
 
-        when {
-            isLoading -> CircularProgressIndicator()
-            erro -> Text("❌ Erro ao buscar máquina!", color = MaterialTheme.colorScheme.error)
-        }
+        Text("MAC do Arduino", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(macAddress, fontSize = 16.sp)
 
-        if (maquina == null && !isLoading) {
-            Button(
-                onClick = { atualizarMaquina() },
-                enabled = true
-            ) {
-                Text("Atualizar")
+        if (maquina == null || setup == null) {
+            Text("❌ Erro ao buscar dados da máquina ou setup", color = MaterialTheme.colorScheme.error)
+
+            Button(onClick = {
+                navController.navigate("info") // ou força recarregar dados
+            }) {
+                Text("Tentar novamente")
+            }
+        } else {
+            Text("✅ Máquina encontrada:")
+            Text("Número de Série: ${maquina.numeroSerie}")
+            Text("Status: ${maquina.status}")
+
+            Button(onClick = {
+                navController.navigate("teste") {
+                    popUpTo("device_info") { inclusive = true }
+                }
+            }) {
+                Text("Continuar")
             }
         }
     }
@@ -117,24 +94,4 @@ fun hasBluetoothPermission(context: Context): Boolean {
         context,
         android.Manifest.permission.BLUETOOTH_CONNECT
     ) == PackageManager.PERMISSION_GRANTED
-}
-
-fun getArduinoMacAddress(context: Context): String? {
-    if (!hasBluetoothPermission(context)) {
-        return "Permissão não concedida"
-    }
-
-    return try {
-        val bluetoothAdapter = getBluetoothAdapter(context)
-        val pairedDevices = bluetoothAdapter?.bondedDevices
-
-        pairedDevices?.forEach { device ->
-            if (device.name.contains("Arduino", ignoreCase = true)) {
-                return device.address
-            }
-        }
-        "Arduino não encontrado"
-    } catch (e: SecurityException) {
-        "Erro de permissão"
-    }
 }

@@ -4,11 +4,11 @@ import android.util.Log
 import androidx.compose.animation.core.Easing
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.example.bleproject.viewmodel.BLEViewModel
 import com.example.fortune_whell_v3.R
 import com.example.fortune_whell_v3.api.models.Maquina
 import com.example.fortune_whell_v3.api.models.Setup
 import com.example.fortune_whell_v3.api.resources.APIResource
-import com.example.fortune_whell_v3.viewmodel.BLEViewModel
 import kotlin.math.pow
 import kotlin.random.Random
 
@@ -207,7 +207,7 @@ object RouletteResource {
             val data = prizeListToPrint.joinToString(":") + ":PRINTER"
             Log.d("LEVANTAMENTO", "📦 Enviando para BLE: $data")
 
-            bleViewModel.sendData(data)
+            bleViewModel.sendMessage(data)
             esperandoConfirmacaoArduino.value = true
 
             val resposta = try {

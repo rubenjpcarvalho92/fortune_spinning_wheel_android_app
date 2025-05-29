@@ -14,10 +14,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.bleproject.viewmodel.BLEViewModel
 import com.example.fortune_whell_v3.Utils.DeviceUtils.Companion.getAndroidId
 import com.example.fortune_whell_v3.screens.BLETestScreen
 import com.example.fortune_whell_v3.screens.DeviceInfoScreen
-import com.example.fortune_whell_v3.viewmodel.BLEViewModel
 import com.example.fortune_whell_v3.viewmodel.MaquinaViewModel
 
 @Composable
@@ -36,14 +36,12 @@ fun AppNavigation() {
     LaunchedEffect(Unit) {
         val numeroSerie = getAndroidId(context)
         maquinaViewModel.inicializar(numeroSerie)
-
-        val macAddress = "78:21:84:7A:74:4E" // substitui pelo teu MAC real
-        bluetoothViewModel.connectToExistingDevice(macAddress)
     }
 
     // Configurando as rotas de navegação
     NavHost(navController = navController, startDestination = "info") {
-        composable("info"){ DeviceInfoScreen (navController) }
+        composable("info"){ DeviceInfoScreen (navController,maquinaViewModel,bluetoothViewModel
+        ) }
         composable("demo") { GhostModeScreen(navController, maquinaViewModel) }
         composable("login") { LoginScreen(navController) }
         composable("main") { MainScreen(navController, maquinaViewModel) }

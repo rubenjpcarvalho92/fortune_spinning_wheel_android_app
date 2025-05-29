@@ -3,7 +3,7 @@
 
     <!-- Permitir HTTP para o teu servidor real -->
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">sabedoriariasistemica.com</domain>
+        <domain includeSubdomains="true"> https://stardiverapifortunewhell.pt/.pt</domain>
     </domain-config>
 
 </network-security-config>

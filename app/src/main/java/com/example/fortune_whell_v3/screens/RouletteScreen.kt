@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.bleproject.viewmodel.BLEViewModel
 import com.example.fortune_wheel_v3.components.AnimatedButtonWithBorder
 import com.example.fortune_whell_v3.R
 import com.example.fortune_whell_v3.Utils.DeviceUtils.Companion.getAndroidId
@@ -50,7 +51,6 @@ import com.example.fortune_whell_v3.api.resources.APIResource
 import kotlinx.coroutines.delay
 import kotlin.math.*
 import com.example.fortune_whell_v3.resources.RouletteResource
-import com.example.fortune_whell_v3.viewmodel.BLEViewModel
 import com.example.fortune_whell_v3.viewmodel.MaquinaViewModel
 
 @Composable
@@ -80,11 +80,12 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
     var talaoCriado by remember { mutableStateOf<Talao?>(null) }
     var maquina by remember { mutableStateOf<Maquina?>(null) }
     var showPopupLevantamento by remember { mutableStateOf(false) }
+    val bleMessage by bleViewModel.bleMessage.collectAsState()
+
 
     val levantamentoEmCurso = remember { mutableStateOf(false) }
 
     var esperandoConfirmacaoArduino = remember { mutableStateOf(false) }
-    val bleMessage by bleViewModel.receivedMessage.collectAsState()
 
     // Mede a velocidade da roleta
     var lastRotationValue by remember { mutableStateOf(0f) }
@@ -436,6 +437,8 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
         }
         // 🔹 Pop-up Método de Pagamento 2
         if (showPopupPayment2) {
+            bleViewModel.sendMessage("MOEDA|ON")  // Envia sinal ao ESP32 para habilitar o moedeiro
+
             var inputValue by remember { mutableStateOf("") }
             val isValidInput = inputValue.toIntOrNull()?.let { it in 1..10 } ?: false
 
@@ -852,10 +855,10 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
     }
 
     //Comunicação BLE
-    LaunchedEffect(Unit) {
+    /*LaunchedEffect(Unit) {
         Log.d("BLE", "🟢 Verificando estado BLE ao abrir a tela...")
         bleViewModel.updateConnectionState()
-    }
+    }*/
 
     LaunchedEffect(esperandoConfirmacaoArduino) {
         if (esperandoConfirmacaoArduino.value) {
@@ -876,8 +879,9 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
     }
 
     LaunchedEffect(bleMessage) {
-        when (bleMessage) {
-            is BLEViewModel.BleMessage.Ok -> {
+        val msg = bleMessage ?: return@LaunchedEffect
+        when (msg) {
+            is BleMessage.Ok -> {
                 esperandoConfirmacaoArduino.value = false
                 Log.d("BLEResponse", "✅ Recebido OK do Arduino $bleMessage")
                 val talaoSeguro = talaoCriado ?: return@LaunchedEffect
@@ -888,7 +892,7 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                 }
             }
 
-            is BLEViewModel.BleMessage.SemPapel -> {
+            is BleMessage.SemPapel -> {
                 esperandoConfirmacaoArduino.value = false
                 try {
                     maquina?.let {
@@ -899,7 +903,7 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                 }
             }
 
-            is BLEViewModel.BleMessage.Erro -> {
+            is BleMessage.Erro -> {
                 esperandoConfirmacaoArduino.value = false
                 Log.e("BLEResponse", "❌ Erro geral do Arduino $bleMessage")
                 // Se quiseres notificar o servidor de erro geral também:
@@ -912,7 +916,7 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                 }
             }
 
-            is BLEViewModel.BleMessage.Fim -> {
+            is BleMessage.Fim -> {
                 Log.d("BLEResponse", "🏁 Impressão finalizada $bleMessage")
             }
 

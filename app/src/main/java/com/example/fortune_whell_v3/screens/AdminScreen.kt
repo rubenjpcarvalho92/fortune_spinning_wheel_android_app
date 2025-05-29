@@ -25,10 +25,10 @@ import androidx.navigation.NavController
 import com.example.fortune_whell_v3.api.models.Maquina
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.bleproject.viewmodel.BLEViewModel
 import com.example.fortune_whell_v3.api.models.Stock
 import com.example.fortune_whell_v3.Utils.DeviceUtils.Companion.getAndroidId
 import com.example.fortune_whell_v3.api.resources.APIResource
-import com.example.fortune_whell_v3.viewmodel.BLEViewModel
 import com.example.fortune_whell_v3.viewmodel.MaquinaViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
