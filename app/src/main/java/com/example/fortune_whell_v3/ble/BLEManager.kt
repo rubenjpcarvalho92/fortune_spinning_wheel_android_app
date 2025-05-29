@@ -94,7 +94,6 @@ class BLEManager(private val context: Context) {
             }
         }
 
-
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 Log.e("BLEManager", "❌ Falha ao descobrir serviços")
@@ -116,19 +115,16 @@ class BLEManager(private val context: Context) {
             txCharacteristic = service.getCharacteristic(TX_CHARACTERISTIC_UUID)
             rxCharacteristic = service.getCharacteristic(RX_CHARACTERISTIC_UUID)
 
-            enableNotifications(gatt, rxCharacteristic!!)
+            enableNotifications(gatt, txCharacteristic!!) // ✅ Correto agora!
             onConnected?.invoke()
         }
-
-
-
 
         override fun onCharacteristicChanged(
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray
         ) {
-            if (characteristic == rxCharacteristic) {
+            if (characteristic == txCharacteristic) { // ✅ Agora escuta na TX
                 val message = value.toString(Charsets.UTF_8).trim()
                 onMessageReceived?.invoke(message)
 

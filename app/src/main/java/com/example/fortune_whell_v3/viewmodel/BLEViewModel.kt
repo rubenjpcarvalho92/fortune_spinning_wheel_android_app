@@ -42,11 +42,20 @@ class BLEViewModel(application: Application) : AndroidViewModel(application) {
         bleManager.onBleMessage = { msg ->
             viewModelScope.launch {
                 _bleMessage.value = msg
-                val texto = if (msg is BleMessage.Desconhecida) msg.conteudo else msg.toString()
+                val texto = when (msg) {
+                    is BleMessage.Ok -> "OK"
+                    is BleMessage.SemPapel -> "SEM_PAPEL"
+                    is BleMessage.Erro -> "ERRO"
+                    is BleMessage.Fim -> "FIM"
+                    is BleMessage.Desconhecida -> msg.conteudo
+                    else -> "DESCONHECIDO"
+                }
+
                 _lastMessage.value = texto
                 _mensagensRecebidas.emit(texto)
             }
         }
+
     }
 
     fun connectToMac(macAddress: String) {

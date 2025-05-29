@@ -9,6 +9,7 @@ import com.example.fortune_whell_v3.R
 import com.example.fortune_whell_v3.api.models.Maquina
 import com.example.fortune_whell_v3.api.models.Setup
 import com.example.fortune_whell_v3.api.resources.APIResource
+import parseBleMessage
 import kotlin.math.pow
 import kotlin.random.Random
 
@@ -219,41 +220,52 @@ object RouletteResource {
             bleViewModel.sendMessage(comando)
             esperandoConfirmacaoArduino.value = true
 
-            val resposta = try {
+            val respostaRaw = try {
                 bleViewModel.awaitResposta(timeout = 5000)
             } catch (e: Exception) {
                 Log.e("LEVANTAMENTO", "❌ Erro ao aguardar resposta BLE: ${e.message}")
                 null
             }
 
-            Log.d("LEVANTAMENTO", "🖨️ Resposta da impressora: $resposta")
+            val resposta = respostaRaw?.let { parseBleMessage(it) }
 
-            if (resposta == "OK") {
-                try {
-                    val mapaPremios = prizeListToPrint.groupingBy { it }.eachCount()
-
-                    val stockAtual = try {
-                        APIResource.buscarStock(numeroSerie)
-                    } catch (e: Exception) {
-                        Log.e("LEVANTAMENTO", "❌ Erro ao buscar stock: ${e.message}")
-                        null
-                    }
-
-                    stockAtual?.let {
-                        try {
-                            APIResource.descontarPremiosDoStock(numeroSerie, mapaPremios, it)
+            when (resposta) {
+                is BleMessage.Ok -> {
+                    try {
+                        val mapaPremios = prizeListToPrint.groupingBy { it }.eachCount()
+                        val stockAtual = try {
+                            APIResource.buscarStock(numeroSerie)
                         } catch (e: Exception) {
-                            Log.e("LEVANTAMENTO", "❌ Erro ao descontar stock: ${e.message}")
+                            Log.e("LEVANTAMENTO", "❌ Erro ao buscar stock: ${e.message}")
+                            null
                         }
-                    }
 
-                    onLevantamentoTerminado()
-                    Log.i("LEVANTAMENTO", "✅ Premios descontados e levantamento concluído.")
-                } catch (e: Exception) {
-                    Log.e("LEVANTAMENTO", "❌ Erro durante o processamento de levantamento: ${e.message}")
+                        stockAtual?.let {
+                            try {
+                                APIResource.descontarPremiosDoStock(numeroSerie, mapaPremios, it)
+                            } catch (e: Exception) {
+                                Log.e("LEVANTAMENTO", "❌ Erro ao descontar stock: ${e.message}")
+                            }
+                        }
+
+                        onLevantamentoTerminado()
+                        Log.i("LEVANTAMENTO", "✅ Premios descontados e levantamento concluído.")
+                    } catch (e: Exception) {
+                        Log.e("LEVANTAMENTO", "❌ Erro no processamento: ${e.message}")
+                    }
                 }
-            } else {
-                Log.e("LEVANTAMENTO", "❌ Impressão falhou. Resposta: $resposta")
+
+                is BleMessage.SemPapel -> {
+                    Log.e("LEVANTAMENTO", "❌ Impressora sem papel!")
+                }
+
+                is BleMessage.Erro -> {
+                    Log.e("LEVANTAMENTO", "❌ Erro na impressora!")
+                }
+
+                else -> {
+                    Log.e("LEVANTAMENTO", "❌ Resposta inesperada: $respostaRaw")
+                }
             }
 
         } catch (e: Exception) {
@@ -263,6 +275,7 @@ object RouletteResource {
             levantamentoEmCurso.value = false
         }
     }
+
 
 
 

@@ -7,7 +7,12 @@ sealed class BleMessage {
 }
 
 fun parseBleMessage(msg: String): BleMessage {
-    return when (msg.trim().uppercase()) {
+    val clean = msg.trim()
+        .removePrefix("$")
+        .substringBefore("@")
+        .uppercase()
+
+    return when (clean) {
         "OK" -> BleMessage.Ok
         "SEM_PAPEL" -> BleMessage.SemPapel
         "ERRO" -> BleMessage.Erro
@@ -15,3 +20,4 @@ fun parseBleMessage(msg: String): BleMessage {
         else -> BleMessage.Desconhecida(msg)
     }
 }
+
