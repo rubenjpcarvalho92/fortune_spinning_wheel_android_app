@@ -41,21 +41,36 @@ class BLEViewModel(application: Application) : AndroidViewModel(application) {
         }
         bleManager.onBleMessage = { msg ->
             viewModelScope.launch {
-                _bleMessage.value = msg
-                val texto = when (msg) {
+                val novoMsg = when {
+                    msg is BleMessage.Texto && msg.conteudo.startsWith("MOEDA|") -> {
+                        val valor = msg.conteudo.removePrefix("MOEDA|").toFloatOrNull()
+                        if (valor != null) BleMessage.MoedaRecebida(valor) else msg
+                    }
+
+                    msg is BleMessage.Texto && msg.conteudo.startsWith("NOTA|") -> {
+                        val valor = msg.conteudo.removePrefix("NOTA|").toFloatOrNull()
+                        if (valor != null) BleMessage.NotaRecebida(valor) else msg
+                    }
+
+                    else -> msg
+                }
+
+                _bleMessage.value = novoMsg
+
+                val texto = when (novoMsg) {
                     is BleMessage.Ok -> "OK"
                     is BleMessage.SemPapel -> "SEM_PAPEL"
                     is BleMessage.Erro -> "ERRO"
                     is BleMessage.Fim -> "FIM"
-                    is BleMessage.Desconhecida -> msg.conteudo
+                    is BleMessage.Texto -> novoMsg.conteudo
+                    is BleMessage.MoedaRecebida -> "MOEDA|${novoMsg.valor}"
+                    is BleMessage.NotaRecebida -> "NOTA|${novoMsg.valor}"
                     else -> "DESCONHECIDO"
                 }
-
                 _lastMessage.value = texto
                 _mensagensRecebidas.emit(texto)
             }
         }
-
     }
 
     fun connectToMac(macAddress: String) {

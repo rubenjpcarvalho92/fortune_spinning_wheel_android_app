@@ -108,15 +108,16 @@ fun TabsContent(
 }
 
 @Composable
-fun TabelaInfo(navController: NavController,bleViewModel: BLEViewModel) {
+fun TabelaInfo(navController: NavController, bleViewModel: BLEViewModel) {
     val context = LocalContext.current
     var numeroSerie by remember { mutableStateOf<String?>(null) }
     var dadosMaquina by remember { mutableStateOf<Maquina?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         val androidId = getAndroidId(context)
-        Log.d("TabelaInfo", "Número de Série: $androidId")
         numeroSerie = androidId
 
         val numeroSegura = numeroSerie ?: run {
@@ -125,7 +126,6 @@ fun TabelaInfo(navController: NavController,bleViewModel: BLEViewModel) {
         }
 
         val resultado = APIResource.buscarDadosMaquinaRolleta(numeroSegura)
-
         if (resultado != null) {
             dadosMaquina = resultado
         } else {
@@ -139,6 +139,8 @@ fun TabelaInfo(navController: NavController,bleViewModel: BLEViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
+        SnackbarHost(hostState = snackbarHostState)
+
         Column {
             Text(
                 text = "Dados do Equipamento",
@@ -178,57 +180,47 @@ fun TabelaInfo(navController: NavController,bleViewModel: BLEViewModel) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 🔹 Botão "Levantar Máquina"
-                val coroutineScope = rememberCoroutineScope()
-
                 Button(
                     onClick = {
                         coroutineScope.launch {
                             val maquinaAtual = dadosMaquina ?: return@launch
-
-                            // 1️⃣ Buscar prêmios não contabilizados da máquina atual
-                            val premiosNaoContabilizados = APIResource.getPremios(maquinaAtual.numeroSerie, false)
-                            if (premiosNaoContabilizados.isEmpty()) {
-                                Log.w("Levantamento", "⚠️ Nenhum prêmio por contabilizar encontrado.")
+                            val premios = APIResource.getPremios(maquinaAtual.numeroSerie, false)
+                            if (premios.isEmpty()) {
+                                snackbarHostState.showSnackbar("Nenhum prêmio por contabilizar.")
                                 return@launch
                             }
 
-                            // 2️⃣ Somar por código (labels)
-                            val mapaPremios = premiosNaoContabilizados.groupingBy { it.codigoRoleta }.eachCount()
-                            val mensagem = "PRINTER:" + mapaPremios.entries.joinToString(":") { "${it.key}:${it.value}" }
-
-                            // 3️⃣ Enviar mensagem para a impressora
-                            /*bleViewModel.sendData(mensagem)
-
-                            // 4️⃣ Esperar confirmação da impressora
-                            val resposta = bleViewModel.awaitResposta(timeout = 5000)
-                            if (resposta != "OK") {
-                                Log.e("Impressora", "❌ Impressora não confirmou o levantamento.")
+                            val stockAtual = APIResource.buscarStock(maquinaAtual.numeroSerie)
+                            if (stockAtual == null) {
+                                snackbarHostState.showSnackbar("Erro ao buscar stock.")
                                 return@launch
-                            }*/
+                            }
 
-                            // 5️⃣ Marcar os prêmios como contabilizados
+                            val dataHora = getDataHoraAtual()
+                            val comando = buildLevantamentoCommand(maquinaAtual, stockAtual, dataHora)
+                            bleViewModel.sendMessage(comando)
+
+                            val resposta = bleViewModel.awaitResposta(timeout = 7000)
+                            if (resposta != "OK") {
+                                snackbarHostState.showSnackbar("Erro na impressão: $resposta")
+                                return@launch
+                            }
+
                             val sucesso = APIResource.contabilizarPremios(maquinaAtual.numeroSerie)
                             if (!sucesso) {
-                                Log.e("Premios", "❌ Falha ao contabilizar os prêmios após impressão.")
+                                snackbarHostState.showSnackbar("Falha ao contabilizar os prêmios.")
                                 return@launch
                             }
 
-                            // 6️⃣ Registrar levantamento
-                            val stockAtual = APIResource.buscarStock(maquinaAtual.numeroSerie) ?: return@launch
                             val levantamento = APIResource.resetGanhosMaquina(maquinaAtual, stockAtual)
-
-                            dadosMaquina = dadosMaquina?.copy(
+                            dadosMaquina = maquinaAtual.copy(
                                 apostadoParcial = 0,
                                 atribuidoParcial = 0f,
-                                taxaGanhoParcial = 0f
+                                taxaGanhoParcial = 0f,
+                                apostadoParcialDinheiro = 0,
                             )
 
-                            if (levantamento != null) {
-                                Log.d("Levantamento", "✅ Levantamento registado: $levantamento")
-                            } else {
-                                Log.e("Levantamento", "❌ Falha ao registar levantamento")
-                            }
+                            snackbarHostState.showSnackbar("✅ Levantamento realizado com sucesso.")
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -242,7 +234,6 @@ fun TabelaInfo(navController: NavController,bleViewModel: BLEViewModel) {
             }
         }
 
-        // 🔹 Botão para voltar ao menu
         Button(
             onClick = { navController.navigate("login") },
             modifier = Modifier
@@ -254,6 +245,49 @@ fun TabelaInfo(navController: NavController,bleViewModel: BLEViewModel) {
         }
     }
 }
+
+fun getDataHoraAtual(): String {
+    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+    return sdf.format(Date())
+}
+
+fun buildLevantamentoCommand(maquina: Maquina, stock: Stock, dataHora: String): String {
+    return buildString {
+        append("LEVANTAMENTO|PRINT|")
+        append(maquina.numeroSerie).append("|")
+        append(maquina.valorAposta).append(":")
+        append(maquina.atribuidoTotal).append(":")
+        append(maquina.apostadoTotal).append(":")
+        append(maquina.taxaGanhoDefinida).append(":")
+        append(maquina.taxaGanhoActual).append(":")
+        append(maquina.taxaGanhoParcial).append(":")
+        append(maquina.apostadoParcial).append(":")
+        append(maquina.atribuidoParcial).append(":")
+        append(maquina.status).append(":")
+        append(maquina.roloPapelOK).append(":")
+        append(maquina.stockOK).append(":")
+        append(maquina.Admins_NIF).append(":")
+        append(maquina.Funcionarios_NIF).append(":")
+        append(maquina.Clientes_NIF).append(":")
+        append(maquina.MACArduino).append(":")
+        append(maquina.apostadoParcialDinheiro).append("|")
+        append(stock.VD).append(":")
+        append(stock.PT).append(":")
+        append(stock.CI).append(":")
+        append(stock.AM).append(":")
+        append(stock.GM).append(":")
+        append(stock.VR).append(":")
+        append(stock.LR).append(":")
+        append(stock.PC).append(":")
+        append(stock.RX).append(":")
+        append(stock.AZ).append(":")
+        append(stock.BB).append(":")
+        append(stock.EE).append(":")
+        append(stock.ARC).append("|")
+        append(dataHora)
+    }
+}
+
 
 @Composable
 fun TabelaEstado(numeroSerie: String) {

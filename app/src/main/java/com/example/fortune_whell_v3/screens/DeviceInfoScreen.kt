@@ -59,7 +59,7 @@ fun DeviceInfoScreen(
         Text("MAC do Arduino", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text(macAddress, fontSize = 16.sp)
 
-        if (maquina == null || setup == null) {
+        if (maquina == null || setup == null ) {
             Text("❌ Erro ao buscar dados da máquina ou setup", color = MaterialTheme.colorScheme.error)
 
             Button(onClick = {

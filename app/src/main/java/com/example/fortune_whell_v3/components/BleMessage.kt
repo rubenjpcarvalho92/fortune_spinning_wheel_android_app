@@ -3,8 +3,12 @@ sealed class BleMessage {
     object SemPapel : BleMessage()
     object Erro : BleMessage()
     object Fim : BleMessage()
-    data class Desconhecida(val conteudo: String) : BleMessage()
+    data class Texto(val conteudo: String) : BleMessage()
+    data class MoedaRecebida(val valor: Float) : BleMessage()
+    data class NotaRecebida(val valor: Float) : BleMessage()
 }
+
+
 
 fun parseBleMessage(msg: String): BleMessage {
     val clean = msg.trim()
@@ -17,7 +21,8 @@ fun parseBleMessage(msg: String): BleMessage {
         "SEM_PAPEL" -> BleMessage.SemPapel
         "ERRO" -> BleMessage.Erro
         "FIM" -> BleMessage.Fim
-        else -> BleMessage.Desconhecida(msg)
+        else -> BleMessage.Texto(msg) // ✅ devolve como texto genérico
     }
 }
+
 

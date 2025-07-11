@@ -66,6 +66,7 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
     var slotCount by remember { mutableStateOf(10) } // Número fixo de slots, definido pelo pop-up
     var showPopupPayment1 by remember { mutableStateOf(false) } // Controla a exibição do pop-up final
     var showPopupPayment2 by remember { mutableStateOf(false) } // Controla a exibição do pop-up final
+    var showPopupPayment3 by remember { mutableStateOf(false) }
     var showPopupPayment by remember { mutableStateOf(true) } // Agora mostra diretamente o pop-up de pagamento
     var isManualSpin by remember { mutableStateOf(false) } // Indica se foi uma interação manual
     val numeroSerie = getAndroidId(LocalContext.current)
@@ -82,7 +83,7 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
     var showPopupLevantamento by remember { mutableStateOf(false) }
     val bleMessage by bleViewModel.bleMessage.collectAsState()
     var inputValue by remember { mutableStateOf("") }
-
+    var origemPagamento by remember { mutableStateOf("") } // "MOEDA", "NOTA", ou "" (MB WAY, etc)
 
 
     val levantamentoEmCurso = remember { mutableStateOf(false) }
@@ -296,8 +297,6 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
             }
         }
 
-
-
         // pop up com os menus iniciais de pagamento
         if (showPopupPayment) {
             Box(
@@ -355,6 +354,22 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
+                        // 🔹 Botão de Método 3
+                        Box(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .background(Color.Transparent)
+                                .pointerInput(Unit) {
+                                    detectTapGestures { showPopupPayment3 = true }
+                                }
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.dollar_bill), // <- adiciona imagem ao drawable
+                                contentDescription = "Método 3",
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -489,8 +504,9 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                         if (parsedValue in 1..11) {
                             Button(
                                 onClick = {
+                                    bleViewModel.sendMessage("MOEDA|OFF") // ✅ desliga moedeiro
                                     creditValue = parsedValue
-                                    inputValue = "" // ← limpa o campo de texto
+                                    inputValue = ""
                                     slotCount = parsedValue
                                     showPopupPayment2 = false
                                     showPopupPayment = false
@@ -507,7 +523,103 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                         if (parsedValue == 0) {
                             Button(
                                 onClick = {
+                                    bleViewModel.sendMessage("MOEDA|OFF") // ✅ desliga moedeiro
                                     showPopupPayment2 = false
+                                    showPopupPayment = true
+                                    origemPagamento = "MOEDA"
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Black,
+                                    contentColor = Color(0xFFDAA520)
+                                )
+                            ) {
+                                Text("Voltar", color = Color(0xFFDAA520))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showPopupPayment3) {
+            LaunchedEffect(showPopupPayment3) {
+                if (showPopupPayment3) {
+                    bleViewModel.sendMessage("NOTA|ON")
+                    Log.d("BLE", "🟢 Noteiro ligado")
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier
+                        .background(Color.White, shape = MaterialTheme.shapes.medium)
+                        .padding(24.dp)
+                ) {
+                    Text(
+                        text = "Você escolheu Método 3 (Notas)",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Image(
+                        painter = painterResource(id = R.drawable.dollar_bill), // substitui com tua imagem
+                        contentDescription = "Imagem Noteiro",
+                        modifier = Modifier.size(140.dp)
+                    )
+
+                    // Campo de entrada para notas
+                    TextField(
+                        value = inputValue,
+                        onValueChange = {
+                            inputValue = it.filter { char -> char.isDigit() }
+                            val parsed = inputValue.toIntOrNull() ?: 0
+                            if (parsed >= 10) {
+                                bleViewModel.sendMessage("NOTA|OFF")
+                                Log.d("BLE", "⛔ Noteiro desligado (input >= 10): $parsed")
+                            }
+                        },
+                        singleLine = true,
+                        placeholder = { Text("Digite um valor (1-10)") }
+                    )
+
+                    val parsedValue = inputValue.toIntOrNull() ?: 0
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        if (parsedValue in 1..11) {
+                            Button(
+                                onClick = {
+                                    bleViewModel.sendMessage("NOTA|OFF")
+                                    creditValue = parsedValue
+                                    inputValue = ""
+                                    slotCount = parsedValue
+                                    showPopupPayment3 = false
+                                    showPopupPayment = false
+                                    origemPagamento = "NOTA"
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Black,
+                                    contentColor = Color(0xFFDAA520)
+                                )
+                            ) {
+                                Text("Jogar", color = Color(0xFFDAA520))
+                            }
+                        }
+
+                        if (parsedValue == 0) {
+                            Button(
+                                onClick = {
+                                    bleViewModel.sendMessage("NOTA|OFF")
+                                    showPopupPayment3 = false
                                     showPopupPayment = true
                                 },
                                 colors = ButtonDefaults.buttonColors(
@@ -522,6 +634,7 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                 }
             }
         }
+
 
         // Pop up com a grelha de prémios
         if (showPopupPrizes) {
@@ -756,13 +869,21 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                     val novoAtribuido= maquinaLocal.atribuidoTotal + valorPremio
                     val novoApostado=maquinaLocal.apostadoTotal + maquinaLocal.valorAposta
 
+                    val novoApostadoParcialDinheiro = if (origemPagamento in listOf("MOEDA", "NOTA")) {
+                        maquinaLocal.apostadoParcialDinheiro + maquinaLocal.valorAposta
+                    } else {
+                        maquinaLocal.apostadoParcialDinheiro
+                    }
+
+
                     val maquinaAtualizada = maquinaLocal.copy(
                         atribuidoTotal =novoAtribuido,
                         apostadoTotal = novoApostado,
                         taxaGanhoActual = (novoApostado-novoAtribuido) / novoApostado,
                         taxaGanhoParcial = (novoApostado-novoAtribuido) / novoApostado,
                         apostadoParcial = novoApostado,
-                        atribuidoParcial = novoAtribuido
+                        atribuidoParcial = novoAtribuido,
+                        apostadoParcialDinheiro = novoApostadoParcialDinheiro // Só soma se MOEDA ou NOTA
                     )
 
                     try {
@@ -926,7 +1047,6 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
             is BleMessage.Erro -> {
                 esperandoConfirmacaoArduino.value = false
                 Log.e("BLEResponse", "❌ Erro geral do Arduino $bleMessage")
-                // Se quiseres notificar o servidor de erro geral também:
                 try {
                     maquina?.let {
                         APIResource.reportarEstadoImpressora(it, "ERRO")
@@ -938,6 +1058,24 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
 
             is BleMessage.Fim -> {
                 Log.d("BLEResponse", "🏁 Impressão finalizada $bleMessage")
+            }
+
+            is BleMessage.MoedaRecebida -> {
+                val valorAtual = inputValue.toFloatOrNull() ?: 0f
+                val novoValor = msg.valor
+                inputValue = novoValor.toInt().toString()
+                Log.d("BLE", "🪙 Moeda recebida: ${msg.valor} | Total: $inputValue")
+            }
+
+            is BleMessage.NotaRecebida -> {
+                val valorAtual = inputValue.toFloatOrNull() ?: 0f
+                val novoValor = msg.valor
+                inputValue = novoValor.toInt().toString()
+                Log.d("BLE", "💵 Nota recebida: ${msg.valor} | Total: $inputValue")
+            }
+
+            is BleMessage.Texto -> {
+                Log.d("BLE", "📨 Texto genérico recebido: ${msg.conteudo}")
             }
 
             else -> Unit

@@ -16,5 +16,6 @@ data class Maquina(
     val Admins_NIF: Int,
     val Funcionarios_NIF: Int,
     val Clientes_NIF: Int,
-    val MACArduino: String
+    val MACArduino: String,
+    val apostadoParcialDinheiro: Int
 )
