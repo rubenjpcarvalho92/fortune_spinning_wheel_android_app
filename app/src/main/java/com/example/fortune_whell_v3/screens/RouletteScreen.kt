@@ -549,8 +549,8 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                     }
 
                     //DEBUG
-                    val parsedValue = inputValue.toIntOrNull() ?: 0
-
+                    //val parsedValue = inputValue.toIntOrNull() ?: 0
+                    val parsedValue = 4
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
@@ -1043,40 +1043,61 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
     }
 
     // 🔹 Animação do pino batendo nos pregos ao desacelerar
+    //DEBUG
     LaunchedEffect(roletaVelocidade) {
-        if (roletaVelocidade in 1f..2000f) { // Ajusta o intervalo para o efeito
+        if (roletaVelocidade > 2f) {
             val job = coroutineScope.launch {
-                while (roletaVelocidade > 1f) { // Mantém vibração enquanto desacelera
-                    val intensidadeVibracao = (roletaVelocidade / 6).coerceIn(1f, 8f)
+                while (roletaVelocidade > 1f) {
+                    val intensidade = (roletaVelocidade / 6).coerceIn(6f, 40f) // 🔥 amplitude agressiva
 
-                    val deslocamento =
-                        if (Random.nextBoolean()) intensidadeVibracao else -intensidadeVibracao
+                    when {
+                        roletaVelocidade > 100f -> {
+                            // 🔸 Muito rápido → dobra muito o pino e mantém pouco tempo
+                            pointerAngle.animateTo(
+                                targetValue = +40f, // 💥 máximo inclinado
+                                animationSpec = tween(durationMillis = 60)
+                            )
+                            delay(20) // mantém muito pouco tempo para parecer empurrado
+                        }
 
-                    pointerAngle.animateTo(
-                        targetValue = deslocamento,
-                        animationSpec = tween(durationMillis = 30)
-                    )
+                        roletaVelocidade > 10f -> {
+                            // 🔸 Velocidade média → batida seca e recuperação rápida
+                            pointerAngle.animateTo(
+                                targetValue = +intensidade,
+                                animationSpec = tween(durationMillis = 40)
+                            )
+                            delay(10) // quase imediato
+                            pointerAngle.animateTo(
+                                targetValue = 0f,
+                                animationSpec = tween(durationMillis = 60)
+                            )
+                            delay(10)
+                        }
 
-                    pointerAngle.animateTo(
-                        targetValue = -deslocamento,
-                        animationSpec = tween(durationMillis = 30)
-                    )
-
-                    delay(
-                        20 + Random.nextLong(
-                            10,
-                            40
-                        )
-                    ) // Pequena variação no tempo para parecer mais natural
+                        else -> {
+                            // 🔸 Quase a parar → toque suave e curto
+                            pointerAngle.animateTo(
+                                targetValue = +(intensidade / 2),
+                                animationSpec = tween(durationMillis = 30)
+                            )
+                            delay(10)
+                            pointerAngle.animateTo(
+                                targetValue = 0f,
+                                animationSpec = tween(durationMillis = 60)
+                            )
+                            delay(15)
+                        }
+                    }
                 }
             }
 
             job.join()
 
-            // Suaviza o pino no final (evita que fique "tremendo" no fim)
-            pointerAngle.animateTo(0f, animationSpec = tween(500))
+            pointerAngle.animateTo(0f, animationSpec = tween(300))
         }
     }
+
+
 
     //Comunicação BLE
     /*LaunchedEffect(Unit) {
