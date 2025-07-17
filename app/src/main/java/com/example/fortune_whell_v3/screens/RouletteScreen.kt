@@ -549,8 +549,8 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                     }
 
                     //DEBUG
-                    //val parsedValue = inputValue.toIntOrNull() ?: 0
-                    val parsedValue = 4
+                    val parsedValue = inputValue.toIntOrNull() ?: 0
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
