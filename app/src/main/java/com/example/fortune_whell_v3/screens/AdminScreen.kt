@@ -27,7 +27,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bleproject.viewmodel.BLEViewModel
 import com.example.fortune_whell_v3.api.models.Stock
-import com.example.fortune_whell_v3.Utils.DeviceUtils.Companion.getAndroidId
 import com.example.fortune_whell_v3.api.resources.APIResource
 import com.example.fortune_whell_v3.viewmodel.MaquinaViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -94,21 +93,21 @@ fun TabsContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         when (selectedTabIndex) {
-            0 -> TabelaInfo(navController, bluetoothViewModel)
+            0 -> TabelaInfo(navController, bluetoothViewModel, maquinaViewModel)
             1 -> {
-                val numeroSerie = getAndroidId(LocalContext.current)
-                TabelaEstado(numeroSerie)
+                val serialNumber = maquinaViewModel.numeroSerie
+                TabelaEstado(serialNumber)
             }
             2 -> {
-                val numeroSerie = getAndroidId(LocalContext.current)
-                TabelaStock(numeroSerie, maquinaViewModel)
+                val serialNumber = maquinaViewModel.numeroSerie
+                TabelaStock(serialNumber, maquinaViewModel)
             }
         }
     }
 }
 
 @Composable
-fun TabelaInfo(navController: NavController, bleViewModel: BLEViewModel) {
+fun TabelaInfo(navController: NavController, bleViewModel: BLEViewModel,maquinaViewModel: MaquinaViewModel ) {
     val context = LocalContext.current
     var numeroSerie by remember { mutableStateOf<String?>(null) }
     var dadosMaquina by remember { mutableStateOf<Maquina?>(null) }
@@ -117,7 +116,7 @@ fun TabelaInfo(navController: NavController, bleViewModel: BLEViewModel) {
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        val androidId = getAndroidId(context)
+        val androidId = maquinaViewModel.numeroSerie
         numeroSerie = androidId
 
         val numeroSegura = numeroSerie ?: run {

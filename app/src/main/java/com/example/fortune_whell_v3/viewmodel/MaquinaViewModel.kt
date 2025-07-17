@@ -1,6 +1,8 @@
 package com.example.fortune_whell_v3.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.Context
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.*
 import com.example.fortune_whell_v3.api.models.Maquina
@@ -8,7 +10,9 @@ import com.example.fortune_whell_v3.api.models.Setup
 import com.example.fortune_whell_v3.api.resources.APIResource
 import kotlinx.coroutines.launch
 
-class MaquinaViewModel : ViewModel() {
+class MaquinaViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val prefs = application.getSharedPreferences("APP_PREF", Context.MODE_PRIVATE)
 
     var maquina by mutableStateOf<Maquina?>(null)
         private set
@@ -16,11 +20,32 @@ class MaquinaViewModel : ViewModel() {
     var setup by mutableStateOf<Setup?>(null)
         private set
 
-    var numeroSerie by mutableStateOf("")
+    var numeroSerie by mutableStateOf(prefs.getString("numero_serie", "") ?: "")
         private set
 
+    // 🔹 Inicializa automaticamente se já existir número de série guardado
+    init {
+        if (numeroSerie.isNotBlank()) {
+            inicializar(numeroSerie)
+        }
+    }
+
+    // 🔹 Define e guarda o número de série manualmente
+    fun definirNumeroSerie(novo: String) {
+        numeroSerie = novo
+        prefs.edit().putString("numero_serie", novo).apply()
+        inicializar(novo)
+    }
+
+    fun atualizarMaquina(maquinaAtualizada: Maquina) {
+        maquina = maquinaAtualizada
+    }
+
+
     // 🔹 Inicializa a máquina e o setup com base no número de série
-    fun inicializar(numeroSerie: String) {
+    fun inicializar(numeroSerie: String = this.numeroSerie) {
+        if (numeroSerie.isBlank()) return
+
         this.numeroSerie = numeroSerie
 
         viewModelScope.launch {
@@ -59,14 +84,5 @@ class MaquinaViewModel : ViewModel() {
                 it.C12, it.C13, it.C14, it.C15
             )
         } ?: emptyList()
-
-    val brindes: List<String>
-        get() = setup?.let {
-            listOf(
-                it.brinde_am, it.brinde_az, it.brinde_bb, it.brinde_ci,
-                it.brinde_ee, it.brinde_gm, it.brinde_lr, it.brinde_pc,
-                it.brinde_pt, it.brinde_rx, it.brinde_vd, it.brinde_vr,
-                it.brinde_arc
-            )
-        } ?: emptyList()
 }
+

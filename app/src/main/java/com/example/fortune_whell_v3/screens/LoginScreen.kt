@@ -10,7 +10,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -18,19 +17,19 @@ import androidx.navigation.NavController
 import com.example.fortune_whell_v3.R
 import com.example.fortune_whell_v3.api.services.ApiServices
 import com.example.fortune_whell_v3.resources.LoginResource
-import com.example.fortune_whell_v3.Utils.DeviceUtils.Companion.getAndroidId
+import com.example.fortune_whell_v3.viewmodel.MaquinaViewModel
 import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun LoginScreen(navController: NavController) {
+fun LoginScreen(navController: NavController, maquinaViewModel: MaquinaViewModel) {
     val clienteService = ApiServices.clienteService
     val adminService = ApiServices.adminService
     val funcionarioService = ApiServices.funcionarioService
     val loginService = ApiServices.loginService
     val maquinaService = ApiServices.maquinaService
 
-    val numeroSerie = getAndroidId(LocalContext.current)
+    val numeroSerie = maquinaViewModel.numeroSerie
 
     var username by remember { mutableStateOf("") }
     var codigoAcesso by remember { mutableStateOf("") }

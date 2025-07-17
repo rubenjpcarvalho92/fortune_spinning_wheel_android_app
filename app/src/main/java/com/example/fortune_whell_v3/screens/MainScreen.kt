@@ -13,6 +13,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.fortune_whell_v3.R
@@ -22,6 +24,8 @@ import com.example.fortune_whell_v3.resources.RouletteResource.getPrizeGrid
 import com.example.fortune_whell_v3.viewmodel.MaquinaViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import com.example.fortune_whell_v3.api.resources.APIResource
+import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -30,11 +34,12 @@ fun MainScreen(navController: NavController, maquinaViewModel: MaquinaViewModel 
     var lastInteractionTime by remember { mutableStateOf(System.currentTimeMillis()) }
     var isInactive by remember { mutableStateOf(false) }
     var showPopupPrizes by remember { mutableStateOf(false) }
+    var showPopupMaquinaInativa by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (true) {
             delay(1_000L)
-            if (System.currentTimeMillis() - lastInteractionTime > 1 * 6 * 1_000L && !isInactive) {
+            if (System.currentTimeMillis() - lastInteractionTime > 1 * 300 * 1_000L && !isInactive) {
                 isInactive = true
                 navController.navigate("demo")
             }
@@ -71,7 +76,20 @@ fun MainScreen(navController: NavController, maquinaViewModel: MaquinaViewModel 
                     isAnimated = true,
                     verticalOffset = 220.dp
                 ) {
-                    navController.navigate("roulette")
+                    coroutineScope.launch {
+                        try {
+                            val maquinaAtualizada = APIResource.buscarDadosMaquinaRolleta(maquinaViewModel.numeroSerie)
+
+                            if (maquinaAtualizada?.status?.lowercase() == "activa") {
+                                maquinaViewModel.atualizarMaquina(maquinaAtualizada)
+                                navController.navigate("roulette")
+                            } else {
+                                showPopupMaquinaInativa = true
+                            }
+                        } catch (e: Exception) {
+                            println("❌ Erro ao verificar estado da máquina: ${e.message}")
+                        }
+                    }
                 }
             }
 
@@ -179,6 +197,46 @@ fun MainScreen(navController: NavController, maquinaViewModel: MaquinaViewModel 
                             )
                         ) {
                             Text("Fechar", color = Color(0xFFDAA520))
+                        }
+                    }
+                }
+            }
+
+            // Pop-up de máquina inativa
+            if (showPopupMaquinaInativa) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.7f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .background(Color.White, shape = MaterialTheme.shapes.medium)
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "⚠️ Máquina indisponível",
+                            color = Color.Red,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Esta máquina está inativa no momento.\nContacte o operador.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { showPopupMaquinaInativa = false },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Black,
+                                contentColor = Color(0xFFDAA520)
+                            )
+                        ) {
+                            Text("Fechar")
                         }
                     }
                 }

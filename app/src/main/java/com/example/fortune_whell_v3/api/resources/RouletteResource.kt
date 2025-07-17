@@ -86,41 +86,42 @@ object RouletteResource {
     }
 
     fun getPrizeGrid(setup: Setup, maquina: Maquina): List<List<Any>> {
-        val labels = listOf(
-            setup.L0, setup.L1, setup.L2, setup.L3,
-            setup.L4, setup.L5, setup.L6, setup.L7,
-            setup.L8, setup.L9, setup.L10, setup.L11,
-            setup.L12, setup.L13, setup.L14, setup.L15
+        val labelToBrinde = mapOf(
+            "VD" to setup.brinde_vd,
+            "PT" to setup.brinde_pt,
+            "CI" to setup.brinde_ci,
+            "AM" to setup.brinde_am,
+            "GM" to setup.brinde_gm,
+            "VR" to setup.brinde_vr,
+            "LR" to setup.brinde_lr,
+            "PC" to setup.brinde_pc,
+            "RX" to setup.brinde_rx,
+            "AZ" to setup.brinde_az,
+            "BB" to setup.brinde_bb,
+            "EE" to setup.brinde_ee,
+            "ARC" to setup.brinde_arc
         )
 
-        val brindes = listOf(
-            setup.brinde_lr, setup.brinde_vr, setup.brinde_pc, setup.brinde_az,
-            setup.brinde_pt, setup.brinde_rx, setup.brinde_vd, setup.brinde_bb,
-            setup.brinde_ci, setup.brinde_gm, setup.brinde_am,
-            if (maquina.valorAposta == 2) setup.brinde_arc else setup.brinde_ee
+        val selectedLabels = listOf(
+            "LR", "VR", "PC", "AZ",
+            "PT", "RX", "VD", "BB",
+            "CI", "GM", "AM",
+            if (maquina.valorAposta == 2) "ARC" else "EE"
         )
 
-        val orderedLabels = listOf(
-            labels[6], labels[5], labels[8], labels[2],
-            labels[4], labels[9], labels[10], labels[1],
-            labels[13], labels[14], labels[12], labels[11]
-        )
-
-        val orderedImages = listOf(
-            brindes[0], brindes[1], brindes[2], brindes[3],
-            brindes[4], brindes[5], brindes[6], brindes[7],
-            brindes[8], brindes[9], brindes[10], brindes[11]
-        )
+        val orderedImages = selectedLabels.map { labelToBrinde[it] ?: 0 }
 
         return listOf(
-            orderedLabels.subList(0, 4),
+            selectedLabels.subList(0, 4),
             orderedImages.subList(0, 4),
-            orderedLabels.subList(4, 8),
+            selectedLabels.subList(4, 8),
             orderedImages.subList(4, 8),
-            orderedLabels.subList(8, 12),
+            selectedLabels.subList(8, 12),
             orderedImages.subList(8, 12)
         )
     }
+
+
 
     fun calculatePositionByIndex(sliceIndex: Int, roulettePosition: Float): Float {
         var deslocamento: Float
