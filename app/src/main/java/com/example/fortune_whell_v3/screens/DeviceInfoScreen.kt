@@ -20,7 +20,7 @@ fun DeviceInfoScreen(
     bleViewModel: BLEViewModel
 ) {
     val serialNumber = maquinaViewModel.numeroSerie  // ← novo!
-    val macAddress = "3C:8A:1F:B0:07:D2"
+    val macAddress = maquinaViewModel.macESP32//"3C:8A:1F:B0:07:D2"
 
     val isConnected by bleViewModel.isConnected.collectAsState()
     val maquina = maquinaViewModel.maquina

@@ -23,9 +23,12 @@ class MaquinaViewModel(application: Application) : AndroidViewModel(application)
     var numeroSerie by mutableStateOf(prefs.getString("numero_serie", "") ?: "")
         private set
 
-    // 🔹 Inicializa automaticamente se já existir número de série guardado
+    var macESP32 by mutableStateOf(prefs.getString("mac_esp32", "") ?: "")
+        private set
+
+    // 🔹 Inicializa automaticamente se ambos os campos estiverem preenchidos
     init {
-        if (numeroSerie.isNotBlank()) {
+        if (numeroSerie.isNotBlank() && macESP32.isNotBlank()) {
             inicializar(numeroSerie)
         }
     }
@@ -34,13 +37,23 @@ class MaquinaViewModel(application: Application) : AndroidViewModel(application)
     fun definirNumeroSerie(novo: String) {
         numeroSerie = novo
         prefs.edit().putString("numero_serie", novo).apply()
-        inicializar(novo)
+        if (macESP32.isNotBlank()) {
+            inicializar(novo)
+        }
+    }
+
+    // 🔹 Define e guarda o MAC do ESP32 manualmente
+    fun definirMacESP32(novo: String) {
+        macESP32 = novo
+        prefs.edit().putString("mac_esp32", novo).apply()
+        if (numeroSerie.isNotBlank()) {
+            inicializar(numeroSerie)
+        }
     }
 
     fun atualizarMaquina(maquinaAtualizada: Maquina) {
         maquina = maquinaAtualizada
     }
-
 
     // 🔹 Inicializa a máquina e o setup com base no número de série
     fun inicializar(numeroSerie: String = this.numeroSerie) {
@@ -85,4 +98,3 @@ class MaquinaViewModel(application: Application) : AndroidViewModel(application)
             )
         } ?: emptyList()
 }
-

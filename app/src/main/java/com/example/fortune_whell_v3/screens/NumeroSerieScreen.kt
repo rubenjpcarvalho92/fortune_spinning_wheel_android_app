@@ -15,7 +15,8 @@ fun NumeroSerieScreen(
     navController: NavController,
     maquinaViewModel: MaquinaViewModel
 ) {
-    var input by remember { mutableStateOf("") }
+    var numeroSerieInput by remember { mutableStateOf(maquinaViewModel.numeroSerie) }
+    var macInput by remember { mutableStateOf(maquinaViewModel.macESP32) }
 
     Column(
         modifier = Modifier
@@ -24,22 +25,44 @@ fun NumeroSerieScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Insira o número de série da máquina", fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(16.dp))
-        TextField(
-            value = input,
-            onValueChange = { input = it },
-            label = { Text("Número de Série") }
+        Text(
+            "Insira os dados da máquina",
+            fontWeight = FontWeight.Bold
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 🔹 Campo para o número de série
+        TextField(
+            value = numeroSerieInput,
+            onValueChange = { numeroSerieInput = it },
+            label = { Text("Número de Série") },
+            singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 🔹 Campo para o MAC do ESP32
+        TextField(
+            value = macInput,
+            onValueChange = { macInput = it },
+            label = { Text("MAC do ESP32") },
+            singleLine = true
+        )
+
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = {
-            if (input.isNotBlank()) {
-                maquinaViewModel.definirNumeroSerie(input)
+
+        // 🔹 Botão continuar
+        Button(
+            onClick = {
+                maquinaViewModel.definirNumeroSerie(numeroSerieInput)
+                maquinaViewModel.definirMacESP32(macInput)
                 navController.navigate("info") {
                     popUpTo("definirNumeroSerie") { inclusive = true }
                 }
-            }
-        }) {
+            },
+            enabled = numeroSerieInput.isNotBlank() && macInput.isNotBlank()
+        ) {
             Text("Continuar")
         }
     }
