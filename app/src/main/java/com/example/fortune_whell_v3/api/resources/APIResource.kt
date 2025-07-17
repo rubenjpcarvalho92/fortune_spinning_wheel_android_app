@@ -105,6 +105,7 @@ object APIResource {
         val apostado = maquina.apostadoParcial ?: 0
         val atribuido = maquina.atribuidoParcial
         val taxaGanho = maquina.taxaGanhoParcial?.toDouble() ?: 0.0
+        val apostadoDinheiro = maquina.apostadoParcialDinheiro ?: 0
 
         val levantamento = Levantamento(
             numeroSerie = numeroSerie,
@@ -112,6 +113,7 @@ object APIResource {
             apostadoParcial = apostado,
             taxaGanhoParcial = taxaGanho,
             atribuidoParcial = atribuido,
+            apostadoParcialDinheiro= apostadoDinheiro,
             Maquinas_numeroSerie = maquina.numeroSerie,
             VD = stock.VD, PT = stock.PT, CI = stock.CI, AM = stock.AM,
             GM = stock.GM, VR = stock.VR, LR = stock.LR, PC = stock.PC,
@@ -128,7 +130,8 @@ object APIResource {
         val maquinaResetada = maquina.copy(
             apostadoParcial = 0,
             atribuidoParcial = 0f,
-            taxaGanhoParcial = 0f
+            taxaGanhoParcial = 0f,
+            apostadoParcialDinheiro = 0,
         )
         actualizaMaquina(maquinaResetada)
 

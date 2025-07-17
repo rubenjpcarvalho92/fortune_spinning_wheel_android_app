@@ -108,7 +108,6 @@ fun TabsContent(
 
 @Composable
 fun TabelaInfo(navController: NavController, bleViewModel: BLEViewModel,maquinaViewModel: MaquinaViewModel ) {
-    val context = LocalContext.current
     var numeroSerie by remember { mutableStateOf<String?>(null) }
     var dadosMaquina by remember { mutableStateOf<Maquina?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -170,6 +169,7 @@ fun TabelaInfo(navController: NavController, bleViewModel: BLEViewModel,maquinaV
                         CampoFixo("Taxa de Ganho Actual", "${dadosMaquina?.taxaGanhoActual ?: "N/A"} %")
                         CampoFixo("Taxa de Ganho Parcial", "${dadosMaquina?.taxaGanhoParcial ?: "N/A"} %")
                         CampoFixo("Valor Apostado Parcial", "${dadosMaquina?.apostadoParcial ?: "N/A"} €")
+                        CampoFixo("Valor Apostado Dinheiro", "${dadosMaquina?.apostadoParcialDinheiro ?: "N/A"} €")
                         CampoFixo("Valor Atribuído Parcial", "${dadosMaquina?.atribuidoParcial ?: "N/A"} €")
                         CampoFixo("Estado", dadosMaquina?.status ?: "Desconhecido")
                         CampoFixo("Rolo Papel", dadosMaquina?.roloPapelOK ?: "Sem Papel")
@@ -196,6 +196,7 @@ fun TabelaInfo(navController: NavController, bleViewModel: BLEViewModel,maquinaV
                             }
 
                             val dataHora = getDataHoraAtual()
+                            //DEBUG
                             val comando = buildLevantamentoCommand(maquinaAtual, stockAtual, dataHora)
                             bleViewModel.sendMessage(comando)
 

@@ -7,6 +7,7 @@ data class Levantamento(
     val taxaGanhoParcial: Double,
     val atribuidoParcial: Float,
     val Maquinas_numeroSerie: String,
+    val apostadoParcialDinheiro:Int,
     val VD: Int,
     val PT: Int,
     val CI: Int,

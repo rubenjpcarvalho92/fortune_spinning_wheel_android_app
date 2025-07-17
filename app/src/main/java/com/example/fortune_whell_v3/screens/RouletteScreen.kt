@@ -298,6 +298,8 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
 
         // pop up com os menus iniciais de pagamento
         if (showPopupPayment) {
+            val coroutineScope = rememberCoroutineScope() // <- Usa esta linha antes do Box
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -322,13 +324,21 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        // 🔹 Botão de Método 1
+                        // 🔹 MB WAY
                         Box(
                             modifier = Modifier
                                 .size(100.dp)
                                 .background(Color.Transparent)
                                 .pointerInput(Unit) {
-                                    detectTapGestures { showPopupMBway = true }
+                                    detectTapGestures {
+                                        coroutineScope.launch {
+                                            verificarMaquinaExecutar(
+                                                maquinaViewModel,
+                                                acaoSeAtiva = { showPopupMBway = true },
+                                                acaoSeInativa = { showPopupMaquinaInativa = true }
+                                            )
+                                        }
+                                    }
                                 }
                         ) {
                             Image(
@@ -338,13 +348,21 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                             )
                         }
 
-                        // 🔹 Botão de Método 2
+                        // 🔹 Moedas
                         Box(
                             modifier = Modifier
                                 .size(100.dp)
                                 .background(Color.Transparent)
                                 .pointerInput(Unit) {
-                                    detectTapGestures { showPopupMoedas = true }
+                                    detectTapGestures {
+                                        coroutineScope.launch {
+                                            verificarMaquinaExecutar(
+                                                maquinaViewModel,
+                                                acaoSeAtiva = { showPopupMoedas = true },
+                                                acaoSeInativa = { showPopupMaquinaInativa = true }
+                                            )
+                                        }
+                                    }
                                 }
                         ) {
                             Image(
@@ -353,22 +371,30 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
-                        // 🔹 Botão de Método 3
+
+                        // 🔹 Notas
                         Box(
                             modifier = Modifier
                                 .size(100.dp)
                                 .background(Color.Transparent)
                                 .pointerInput(Unit) {
-                                    detectTapGestures { showPopupNotas = true }
+                                    detectTapGestures {
+                                        coroutineScope.launch {
+                                            verificarMaquinaExecutar(
+                                                maquinaViewModel,
+                                                acaoSeAtiva = { showPopupNotas = true },
+                                                acaoSeInativa = { showPopupMaquinaInativa = true }
+                                            )
+                                        }
+                                    }
                                 }
                         ) {
                             Image(
-                                painter = painterResource(id = R.drawable.dollar_bill), // <- adiciona imagem ao drawable
+                                painter = painterResource(id = R.drawable.dollar_bill),
                                 contentDescription = "Método 3",
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
-
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -377,7 +403,6 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                         onClick = {
                             showPopupPayment = false
                             navController.navigate("main")
-
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.Black,
@@ -389,6 +414,8 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                 }
             }
         }
+
+
         // 🔹 Pop-up Método de Pagamento 1
         if (showPopupMBway) {
             Box(
@@ -1416,6 +1443,26 @@ suspend fun spinTheWhell(rouletteIndex: Int, rotationAngle: Animatable<Float, An
         )
     )
 }
+
+suspend fun verificarMaquinaExecutar(
+    maquinaViewModel: MaquinaViewModel,
+    acaoSeAtiva: () -> Unit,
+    acaoSeInativa: () -> Unit
+) {
+    try {
+        val maquinaAtualizada = APIResource.buscarDadosMaquinaRolleta(maquinaViewModel.numeroSerie)
+        if (maquinaAtualizada?.status?.lowercase() == "activa") {
+            maquinaViewModel.atualizarMaquina(maquinaAtualizada)
+            acaoSeAtiva()
+        } else {
+            acaoSeInativa()
+        }
+    } catch (e: Exception) {
+        println("❌ Erro ao verificar estado da máquina: ${e.message}")
+    }
+}
+
+
 
 
 

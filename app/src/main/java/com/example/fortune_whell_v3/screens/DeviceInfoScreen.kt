@@ -63,7 +63,7 @@ fun DeviceInfoScreen(
             Text("Status: ${maquina.status}")
 
             Button(onClick = {
-                navController.navigate("main") {
+                navController.navigate("login") {
                     popUpTo("device_info") { inclusive = true }
                 }
             }) {
