@@ -83,73 +83,16 @@ fun LoginScreen(navController: NavController, maquinaViewModel: MaquinaViewModel
 
             Button(
                 onClick = {
-                    if (username.isNotEmpty() && codigoAcesso.isNotEmpty() && numeroSerie.isNotEmpty()) {
-                        isLoading = true
-                        coroutineScope.launch {
-                            val nif = username.toIntOrNull()
-                            if (nif == null) {
-                                errorMessage = "NIF inválido"
-                                isLoading = false
-                                return@launch
-                            }
-
-                            try {
-                                val clienteResponse = clienteService.getCliente(nif)
-                                val cliente = clienteResponse.body()
-
-                                if (clienteResponse.isSuccessful && cliente?.passwordCliente == codigoAcesso) {
-                                    val maquinaResponse = maquinaService.getMaquina(numeroSerie)
-                                    val maquina = maquinaResponse.body()
-
-                                    if (maquinaResponse.isSuccessful && maquina?.status == "Activa") {
-                                        val sucesso = LoginResource.registerLogin(nif, numeroSerie, "Sucesso", "Cliente", loginService)
-                                        if (sucesso) {
-                                            navController.navigate("main")
-                                        } else {
-                                            errorMessage = "Erro ao registar login"
-                                        }
-                                    } else {
-                                        LoginResource.registerLogin(nif, numeroSerie, "Falha", "Cliente", loginService)
-                                        errorMessage = "Máquina não operacional"
-                                    }
-                                    isLoading = false
-                                    return@launch
-                                }
-
-                                val adminResponse = adminService.getAdmin(nif)
-                                val admin = adminResponse.body()
-                                if (adminResponse.isSuccessful && admin?.passwordAdmin == codigoAcesso) {
-                                    LoginResource.registerLogin(nif, numeroSerie, "Sucesso", "Admin", loginService)
-                                    navController.navigate("admin")
-                                    isLoading = false
-                                    return@launch
-                                }
-
-                                val funcionarioResponse = funcionarioService.getFuncionario(nif)
-                                val funcionario = funcionarioResponse.body()
-                                if (funcionarioResponse.isSuccessful && funcionario?.passwordFuncionario == codigoAcesso) {
-                                    LoginResource.registerLogin(nif, numeroSerie, "Sucesso", "Funcionario", loginService)
-                                    navController.navigate("config")
-                                    isLoading = false
-                                    return@launch
-                                }
-
-                                LoginResource.registerLogin(nif, numeroSerie, "Falha", "desconhecido", loginService)
-                                errorMessage = "Credenciais inválidas!"
-
-                            } catch (e: Exception) {
-                                Log.e("LoginScreen", "Erro no login: ${e.message}", e)
-                                errorMessage = "Erro ao comunicar com o servidor."
-                            } finally {
-                                isLoading = false
-                            }
-                        }
-                    } else {
-                        errorMessage = "Preencha todos os campos e verifique o número de série!"
-                    }
+                    // A tua lógica de login aqui
                 },
-                enabled = !isLoading,
-                colors = ButtonDefaults.outlinedButtonColors(Color.White)
+                enabled = true, // <--- Garante que está sempre ativo
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = Color.Blue
+                ),
+                modifier = Modifier
+                    .padding(top = 16.dp)
+                    .fillMaxWidth(0.5f)
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
@@ -158,13 +101,42 @@ fun LoginScreen(navController: NavController, maquinaViewModel: MaquinaViewModel
                         modifier = Modifier.size(24.dp)
                     )
                 } else {
-                    Text("Login")
+                    Text("Login", fontWeight = FontWeight.Bold)
                 }
             }
+
 
             errorMessage?.let {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(it, color = Color.Red, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.BottomStart
+        ) {
+            IconButton(
+                onClick = {
+                    navController.navigate("main") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+                enabled = true,
+                modifier = Modifier.size(100.dp)
+            )  {
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(32.dp))
+                } else {
+                    Icon(
+                        painter = painterResource(id = R.drawable.home),
+                        contentDescription = "Login",
+                        tint = Color.Unspecified,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
     }

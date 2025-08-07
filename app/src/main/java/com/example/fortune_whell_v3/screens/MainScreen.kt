@@ -36,6 +36,9 @@ fun MainScreen(navController: NavController, maquinaViewModel: MaquinaViewModel 
     var showPopupPrizes by remember { mutableStateOf(false) }
     var showPopupMaquinaInativa by remember { mutableStateOf(false) }
 
+    var touchCount by remember { mutableStateOf(0) }
+    var lastTouchTime by remember { mutableStateOf(0L) }
+
     LaunchedEffect(Unit) {
         while (true) {
             delay(1_000L)
@@ -47,7 +50,6 @@ fun MainScreen(navController: NavController, maquinaViewModel: MaquinaViewModel 
     }
 
     Scaffold {
-        // Fundo da tela
         Image(
             painter = painterResource(id = R.drawable.fundo_mainscreen),
             contentDescription = "Menu Inicial",
@@ -62,9 +64,8 @@ fun MainScreen(navController: NavController, maquinaViewModel: MaquinaViewModel 
                 }
         )
 
-        // Conteúdo
         Box(modifier = Modifier.fillMaxSize()) {
-            // Botão Play no centro
+            // Botão PLAY
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -93,7 +94,7 @@ fun MainScreen(navController: NavController, maquinaViewModel: MaquinaViewModel 
                 }
             }
 
-            // Botão "Ver Prêmios" no canto inferior esquerdo
+            // Botão "Ver Prêmios"
             Button(
                 onClick = { showPopupPrizes = true },
                 modifier = Modifier
@@ -153,12 +154,7 @@ fun MainScreen(navController: NavController, maquinaViewModel: MaquinaViewModel 
                                             when (cell) {
                                                 is String -> {
                                                     if (cell.startsWith("http")) {
-                                                        val painter = rememberAsyncImagePainter(
-                                                            model = cell,
-                                                            onError = {
-                                                                println("Erro ao carregar imagem: $cell")
-                                                            }
-                                                        )
+                                                        val painter = rememberAsyncImagePainter(model = cell)
                                                         Image(
                                                             painter = painter,
                                                             contentDescription = null,
@@ -241,6 +237,31 @@ fun MainScreen(navController: NavController, maquinaViewModel: MaquinaViewModel 
                     }
                 }
             }
+
+            // 🔒 Atalho secreto visível
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 30.dp)
+                    .background(Color.Red.copy(alpha = 0.3f))
+                    .pointerInput(Unit) {
+                        detectTapGestures {
+                            val now = System.currentTimeMillis()
+                            if (now - lastTouchTime < 1500L) {
+                                touchCount++
+                            } else {
+                                touchCount = 1
+                            }
+                            lastTouchTime = now
+
+                            if (touchCount >= 10) {
+                                touchCount = 0
+                                navController.navigate("login")
+                            }
+                        }
+                    }
+            )
         }
     }
 }

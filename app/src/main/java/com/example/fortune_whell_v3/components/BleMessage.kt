@@ -14,15 +14,26 @@ fun parseBleMessage(msg: String): BleMessage {
     val clean = msg.trim()
         .removePrefix("$")
         .substringBefore("@")
-        .uppercase()
 
-    return when (clean) {
-        "OK" -> BleMessage.Ok
-        "SEM_PAPEL" -> BleMessage.SemPapel
-        "ERRO" -> BleMessage.Erro
-        "FIM" -> BleMessage.Fim
-        else -> BleMessage.Texto(msg) // ✅ devolve como texto genérico
+    return when {
+        clean.equals("OK", ignoreCase = true) -> BleMessage.Ok
+        clean.equals("SEM_PAPEL", ignoreCase = true) -> BleMessage.SemPapel
+        clean.equals("ERRO", ignoreCase = true) -> BleMessage.Erro
+        clean.equals("FIM", ignoreCase = true) -> BleMessage.Fim
+
+        clean.startsWith("MOEDA|", ignoreCase = true) -> {
+            val valor = clean.substringAfter("MOEDA|").toFloatOrNull() ?: 0f
+            BleMessage.MoedaRecebida(valor)
+        }
+
+        clean.startsWith("NOTA|", ignoreCase = true) -> {
+            val valor = clean.substringAfter("NOTA|").toFloatOrNull() ?: 0f
+            BleMessage.NotaRecebida(valor)
+        }
+
+        else -> BleMessage.Texto(msg) // genérico
     }
 }
+
 
 

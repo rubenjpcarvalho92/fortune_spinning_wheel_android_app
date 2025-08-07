@@ -218,8 +218,14 @@ object RouletteResource {
             val comando = "TALAO|PRINT|$numeroTalao|$dados"
             Log.d("LEVANTAMENTO", "📦 Enviando comando BLE: $comando")
 
-            bleViewModel.sendMessage(comando)
             esperandoConfirmacaoArduino.value = true
+
+            // ✅ Chamada compatível com o novo sendLongMessage
+            bleViewModel.sendLongMessage(
+                mensagem = comando,
+                esperandoConfirmacao = esperandoConfirmacaoArduino,
+                onRespostaRecebida = {} // ← Não usas aqui, deixamos vazio
+            )
 
             val respostaRaw = try {
                 bleViewModel.awaitResposta(timeout = 5000)
@@ -276,9 +282,5 @@ object RouletteResource {
             levantamentoEmCurso.value = false
         }
     }
-
-
-
-
 }
 

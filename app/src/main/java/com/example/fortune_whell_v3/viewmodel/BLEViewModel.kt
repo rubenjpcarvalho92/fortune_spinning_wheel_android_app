@@ -7,9 +7,11 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.util.Log
+import androidx.compose.runtime.MutableState
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bleproject.ble.BLEManager
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -46,12 +48,10 @@ class BLEViewModel(application: Application) : AndroidViewModel(application) {
                         val valor = msg.conteudo.removePrefix("MOEDA|").toFloatOrNull()
                         if (valor != null) BleMessage.MoedaRecebida(valor) else msg
                     }
-
                     msg is BleMessage.Texto && msg.conteudo.startsWith("NOTA|") -> {
                         val valor = msg.conteudo.removePrefix("NOTA|").toFloatOrNull()
                         if (valor != null) BleMessage.NotaRecebida(valor) else msg
                     }
-
                     else -> msg
                 }
 
@@ -89,6 +89,27 @@ class BLEViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun awaitResposta(timeout: Long = 5000): String? {
         return withTimeoutOrNull(timeout) {
             _mensagensRecebidas.first()
+        }
+    }
+
+    fun sendLongMessage(
+        mensagem: String,
+        esperandoConfirmacao: MutableState<Boolean>,
+        onRespostaRecebida: (String?) -> Unit,
+        maxLength: Int = 18
+    ) {
+        viewModelScope.launch {
+            val chunks = mensagem.chunked(maxLength)
+            for ((index, chunk) in chunks.withIndex()) {
+                bleManager.sendMessage(
+                    if (index == chunks.lastIndex) chunk + "!" else chunk
+                )
+                delay(200)
+            }
+            esperandoConfirmacao.value = true
+            val resposta = awaitResposta()
+            esperandoConfirmacao.value = false
+            onRespostaRecebida(resposta)
         }
     }
 

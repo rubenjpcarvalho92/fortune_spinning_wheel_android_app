@@ -18,6 +18,8 @@ import java.lang.Math.toRadians
 import kotlin.random.Random
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
@@ -63,8 +65,7 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
     var creditValue by remember { mutableStateOf(0) } // Valor inicial de crédito
     var slotCount by remember { mutableStateOf(10) } // Número fixo de slots, definido pelo pop-up
     var showPopupMBway by remember { mutableStateOf(false) } // Controla a exibição do pop-up final
-    var showPopupMoedas by remember { mutableStateOf(false) } // Controla a exibição do pop-up final
-    var showPopupNotas by remember { mutableStateOf(false) }
+    var showDinheiroPopup by remember { mutableStateOf(false) } // Controla a exibição do pop-up final
     var showPopupMaquinaInativa by remember { mutableStateOf(false) }
     var showPopupPayment by remember { mutableStateOf(true) } // Agora mostra diretamente o pop-up de pagamento
     var isManualSpin by remember { mutableStateOf(false) } // Indica se foi uma interação manual
@@ -81,8 +82,9 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
     var maquina by remember { mutableStateOf<Maquina?>(null) }
     var showPopupLevantamento by remember { mutableStateOf(false) }
     val bleMessage by bleViewModel.bleMessage.collectAsState()
-    var inputValue by remember { mutableStateOf("") }
     var origemPagamento by remember { mutableStateOf("") } // "MOEDA", "NOTA", ou "" (MB WAY, etc)
+    var nota5Ativo by remember { mutableStateOf(true) }
+    var nota10Ativo by remember { mutableStateOf(true) }
 
 
     val levantamentoEmCurso = remember { mutableStateOf(false) }
@@ -93,6 +95,9 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
     var lastRotationValue by remember { mutableStateOf(0f) }
     var roletaVelocidade by remember { mutableStateOf(0f) }
 
+    var totalNotas by remember { mutableStateOf(0f) }
+    var totalMoedas by remember { mutableStateOf(0f) }
+    val inputValue = totalNotas + totalMoedas
 
 
 
@@ -246,7 +251,7 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                         modifier = Modifier.fillMaxSize()
                     )
                     Text(
-                        text = (inputValue.toIntOrNull() ?: creditValue).toString(),
+                        text = creditValue.toString(), // 👈 substitui esta linha
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
                         fontSize = 42.sp,
@@ -358,7 +363,7 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                                         coroutineScope.launch {
                                             verificarMaquinaExecutar(
                                                 maquinaViewModel,
-                                                acaoSeAtiva = { showPopupMoedas = true },
+                                                acaoSeAtiva = { showDinheiroPopup = true },
                                                 acaoSeInativa = { showPopupMaquinaInativa = true }
                                             )
                                         }
@@ -368,30 +373,6 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                             Image(
                                 painter = painterResource(id = R.drawable.dinheiro_icon),
                                 contentDescription = "Método 2",
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-
-                        // 🔹 Notas
-                        Box(
-                            modifier = Modifier
-                                .size(100.dp)
-                                .background(Color.Transparent)
-                                .pointerInput(Unit) {
-                                    detectTapGestures {
-                                        coroutineScope.launch {
-                                            verificarMaquinaExecutar(
-                                                maquinaViewModel,
-                                                acaoSeAtiva = { showPopupNotas = true },
-                                                acaoSeInativa = { showPopupMaquinaInativa = true }
-                                            )
-                                        }
-                                    }
-                                }
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.dollar_bill),
-                                contentDescription = "Método 3",
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -467,7 +448,7 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                             modifier = Modifier.fillMaxSize()
                         )
                         Text(
-                            text = "${inputValue.toIntOrNull() ?: 0}",
+                            text = (totalMoedas + totalNotas).toInt().toString(),
                             fontWeight = FontWeight.Bold,
                             color = Color.Black,
                             fontSize = 36.sp,
@@ -498,12 +479,13 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
         }
 
         // 🔹 Pop-up Método de Pagamento 2
-        if (showPopupMoedas) {
-            LaunchedEffect(showPopupMoedas) {
-                if (showPopupMoedas) {
-                    inputValue = "" // limpa valor anterior
-                    bleViewModel.sendMessage("MOEDA|ON")
-                    Log.d("BLE", "🟢 Moedeiro ligado")
+        if (showDinheiroPopup) {
+            LaunchedEffect(showDinheiroPopup) {
+                if (showDinheiroPopup) {
+                    totalMoedas = 0f
+                    totalNotas = 0f
+                    bleViewModel.sendMessage("DINHEIRO|ON!")
+                    Log.d("BLE", "🟢 Moedeiro e noteiro ligados")
                 }
             }
 
@@ -538,7 +520,7 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                             modifier = Modifier.fillMaxSize()
                         )
                         Text(
-                            text = "${inputValue.toIntOrNull() ?: 0}",
+                            text = (totalMoedas + totalNotas).toInt().toString(),
                             fontWeight = FontWeight.Bold,
                             color = Color.Black,
                             fontSize = 36.sp,
@@ -549,21 +531,21 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                     }
 
                     //DEBUG
-                    val parsedValue = inputValue.toIntOrNull() ?: 0
+                    val parsedValue = (totalMoedas + totalNotas).toInt()
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        if (parsedValue in 1..11) {
+                        val totalRecebido = totalMoedas + totalNotas
+
+                        if (totalRecebido in 1f..11f) {
                             Button(
                                 onClick = {
-
-                                    bleViewModel.sendMessage("MOEDA|OFF")
-                                    creditValue = parsedValue
-                                    inputValue = ""
-                                    slotCount = parsedValue
-                                    showPopupMoedas = false
+                                    bleViewModel.sendMessage("DINHEIRO|OFF!")
+                                    creditValue = totalRecebido.toInt()
+                                    slotCount = totalRecebido.toInt()
+                                    showDinheiroPopup = false
                                     showPopupPayment = false
                                 },
                                 colors = ButtonDefaults.buttonColors(
@@ -578,8 +560,8 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                         if (parsedValue == 0) {
                             Button(
                                 onClick = {
-                                    bleViewModel.sendMessage("MOEDA|OFF")
-                                    showPopupMoedas = false
+                                    bleViewModel.sendMessage("DINHEIRO|OFF!")
+                                    showDinheiroPopup = false
                                     showPopupPayment = true
                                     origemPagamento = "MOEDA"
                                 },
@@ -596,101 +578,35 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
             }
         }
 
-        if (showPopupNotas) {
-            LaunchedEffect(showPopupNotas) {
-                if (showPopupNotas) {
-                    inputValue = ""
-                    bleViewModel.sendMessage("NOTA|ON")
-                    Log.d("BLE", "🟢 Noteiro ligado")
+        LaunchedEffect(totalMoedas, totalNotas) {
+            val valor = totalMoedas + totalNotas
+
+            when {
+                valor >= 10f -> {
+                    bleViewModel.sendMessage("DINHEIRO|OFF!")
+                    nota5Ativo = false
+                    nota10Ativo = false
                 }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.7f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier
-                        .background(Color.White, shape = MaterialTheme.shapes.medium)
-                        .padding(24.dp)
-                ) {
-                    Text(
-                        text = "Cre]ditos",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    // 🔁 Contador visual de créditos
-                    Box(
-                        modifier = Modifier
-                            .size(180.dp)
-                            .padding(top = 8.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.credit_counter_v5),
-                            contentDescription = "Contador Créditos",
-                            modifier = Modifier.fillMaxSize()
-                        )
-                        Text(
-                            text = "${inputValue.toIntOrNull() ?: 0} ",
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black,
-                            fontSize = 36.sp,
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .offset(y = 32.dp)
-                        )
+                valor > 5f -> {
+                    if (nota5Ativo) {
+                        bleViewModel.sendMessage("NOTEIRO|OFF|5!")
+                        nota5Ativo = false
                     }
-
-                    val parsedValue = inputValue.toIntOrNull() ?: 0
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        if (parsedValue in 1..11) {
-                            Button(
-                                onClick = {
-                                    bleViewModel.sendMessage("NOTA|OFF")
-                                    creditValue = parsedValue
-                                    inputValue = ""
-                                    slotCount = parsedValue
-                                    showPopupNotas = false
-                                    showPopupPayment = false
-                                    origemPagamento = "NOTA"
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.Black,
-                                    contentColor = Color(0xFFDAA520)
-                                )
-                            ) {
-                                Text("Jogar", color = Color(0xFFDAA520))
-                            }
-                        }
-
-                        if (parsedValue == 0) {
-                            Button(
-                                onClick = {
-                                    bleViewModel.sendMessage("NOTA|OFF")
-                                    showPopupNotas = false
-                                    showPopupPayment = true
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.Black,
-                                    contentColor = Color(0xFFDAA520)
-                                )
-                            ) {
-                                Text("Voltar", color = Color(0xFFDAA520))
-                            }
-                        }
+                    if (nota10Ativo) {
+                        bleViewModel.sendMessage("NOTEIRO|OFF|10!")
+                        nota10Ativo = false
                     }
                 }
+                valor in 1f..<5f -> {
+                    if (nota10Ativo) {
+                        bleViewModel.sendMessage("NOTEIRO|OFF|10!")
+                        nota10Ativo = false
+                    }
+                }
+                // valor < 1 → não faz nada
             }
         }
+
 
         if (showPopupMaquinaInativa) {
             Box(
@@ -1048,62 +964,35 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
         if (roletaVelocidade > 2f) {
             val job = coroutineScope.launch {
                 while (roletaVelocidade > 1f) {
-                    val intensidade = (roletaVelocidade / 6).coerceIn(6f, 40f) // 🔥 amplitude agressiva
+                    val deslocamento = (ln(roletaVelocidade + 1) * 12f).coerceIn(20f, 35f)
 
-                    when {
-                        roletaVelocidade > 100f -> {
-                            // 🔸 Muito rápido → dobra muito o pino e mantém pouco tempo
-                            pointerAngle.animateTo(
-                                targetValue = +40f, // 💥 máximo inclinado
-                                animationSpec = tween(durationMillis = 60)
-                            )
-                            delay(20) // mantém muito pouco tempo para parecer empurrado
-                        }
+                    pointerAngle.animateTo(
+                        targetValue = deslocamento,
+                        animationSpec = tween(durationMillis = 70)
+                    )
 
-                        roletaVelocidade > 10f -> {
-                            // 🔸 Velocidade média → batida seca e recuperação rápida
-                            pointerAngle.animateTo(
-                                targetValue = +intensidade,
-                                animationSpec = tween(durationMillis = 40)
-                            )
-                            delay(10) // quase imediato
-                            pointerAngle.animateTo(
-                                targetValue = 0f,
-                                animationSpec = tween(durationMillis = 60)
-                            )
-                            delay(10)
-                        }
+                    pointerAngle.animateTo(
+                        targetValue = 0f,
+                        animationSpec = spring(
+                            dampingRatio = 0.15f, // Oscilação mais solta
+                            stiffness = 80f       // Mais suave
+                        )
+                    )
 
-                        else -> {
-                            // 🔸 Quase a parar → toque suave e curto
-                            pointerAngle.animateTo(
-                                targetValue = +(intensidade / 2),
-                                animationSpec = tween(durationMillis = 30)
-                            )
-                            delay(10)
-                            pointerAngle.animateTo(
-                                targetValue = 0f,
-                                animationSpec = tween(durationMillis = 60)
-                            )
-                            delay(15)
-                        }
-                    }
+                    delay(100)
                 }
             }
 
             job.join()
 
-            pointerAngle.animateTo(0f, animationSpec = tween(300))
+            pointerAngle.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 300)
+            )
         }
     }
 
 
-
-    //Comunicação BLE
-    /*LaunchedEffect(Unit) {
-        Log.d("BLE", "🟢 Verificando estado BLE ao abrir a tela...")
-        bleViewModel.updateConnectionState()
-    }*/
 
     LaunchedEffect(esperandoConfirmacaoArduino) {
         if (esperandoConfirmacaoArduino.value) {
@@ -1120,11 +1009,6 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
                 esperandoConfirmacaoArduino.value = false
                 // Mostrar popup de erro, ou tentar nova tentativa
             }
-        }
-    }
-    LaunchedEffect(creditValue) {
-        if (creditValue > 10) {
-            bleViewModel.sendMessage("MOEDA|OFF")
         }
     }
 
@@ -1171,17 +1055,13 @@ fun RouletteScreen(navController: NavController, bleViewModel: BLEViewModel = vi
             }
 
             is BleMessage.MoedaRecebida -> {
-                val valorAtual = inputValue.toFloatOrNull() ?: 0f
-                val novoValor = msg.valor
-                inputValue = novoValor.toInt().toString()
-                Log.d("BLE", "🪙 Moeda recebida: ${msg.valor} | Total: $inputValue")
+                totalMoedas += msg.valor
+                Log.d("BLE", "🪙 Moeda recebida: ${msg.valor} | Total moedas: $totalMoedas")
             }
 
             is BleMessage.NotaRecebida -> {
-                val valorAtual = inputValue.toFloatOrNull() ?: 0f
-                val novoValor = msg.valor
-                inputValue = novoValor.toInt().toString()
-                Log.d("BLE", "💵 Nota recebida: ${msg.valor} | Total: $inputValue")
+                totalNotas += msg.valor
+                Log.d("BLE", "💵 Nota recebida: ${msg.valor} | Total notas: $totalNotas")
             }
 
             is BleMessage.Texto -> {
@@ -1290,21 +1170,21 @@ data class WheelSlice(
     val label: String
 )
 private fun DrawScope.drawGoldenPinBetweenSlices(index: Int, radius: Float, sliceAngle: Float) {
-    val pinRadius = 5.dp.toPx() // Tamanho do pino dourado
+    val pinRadius = 8.dp.toPx() // 🔼 Mais largo
+    val alturaExtra = 20.dp.toPx() // 🔼 Sobe o batente
 
-    // Calcula a posição do pino com base no ângulo rotacional
     val pinPosition = Offset(
-        x = center.x + radius * cos(toRadians(sliceAngle * index.toDouble())).toFloat(),
-        y = center.y + radius * sin(toRadians(sliceAngle * index.toDouble())).toFloat()
+        x = center.x + (radius + alturaExtra) * cos(toRadians(sliceAngle * index.toDouble())).toFloat(),
+        y = center.y + (radius + alturaExtra) * sin(toRadians(sliceAngle * index.toDouble())).toFloat()
     )
 
-    // Desenha o pino dourado na posição calculada
     drawCircle(
-        color = Color(0xFFFFD700), // Cor dourada
+        color = Color(0xFFFFD700), // Dourado
         radius = pinRadius,
         center = pinPosition
     )
 }
+
 private fun DrawScope.drawBrightSliceWithImageAndText(index: Int, radius: Float, sliceAngle: Float, slice: WheelSlice, image: ImageBitmap?) {
     // Desenha a fatia
     drawArc(
@@ -1376,20 +1256,27 @@ private fun DrawScope.drawVividBlackLineBetweenSlices(index: Int, radius: Float,
         )
     }
 }
-private fun DrawScope.drawGoldenRim(radius: Float) {
-    val rimWidth = 35.dp.toPx()
+private fun DrawScope.drawGoldenRim(fullRadius: Float) {
+    val rimWidth = 55.dp.toPx()
+
+    // Começa no limite das fatias e cresce para fora
+    val innerRadius = fullRadius - 10.dp.toPx()   // onde param as fatias
+    val adjustedRadius = innerRadius + rimWidth / 2  // centro do traço do aro
+
     val goldenGradient = Brush.radialGradient(
         colors = listOf(Color(0xFFFFD700), Color(0xFFFFA500)),
         center = center,
-        radius = radius
+        radius = adjustedRadius
     )
 
     drawCircle(
         brush = goldenGradient,
-        radius = radius,
+        radius = adjustedRadius,
         style = Stroke(width = rimWidth)
     )
 }
+
+
 private fun DrawScope.drawBlackRim(radius: Float) {
     val rimWidth = 10.dp.toPx()
 
@@ -1400,9 +1287,11 @@ private fun DrawScope.drawBlackRim(radius: Float) {
     )
 }
 private fun DrawScope.drawSmallerGoldenBlackPin(radius: Float, pointerAngle: Float) {
-    val pinHeight = radius / 6
-    val pinWidth = radius / 12
-    val pivotY = center.y - radius - pinHeight / 2 - 10.dp.toPx() // Ponto de rotação
+    val pinHeight = radius / 3.2f     // ✔️ levemente mais comprido (era 1/6)
+    val pinWidth = radius / 9f        // ✔️ levemente mais largo (era 1/12)
+    val offsetExtra = 18.dp.toPx()    // ✔️ subida mais moderada
+
+    val pivotY = center.y - radius - pinHeight / 2 - offsetExtra
 
     val goldenGradient = Brush.radialGradient(
         colors = listOf(Color(0xFFFFD700), Color(0xFFB8860B)),
@@ -1410,7 +1299,7 @@ private fun DrawScope.drawSmallerGoldenBlackPin(radius: Float, pointerAngle: Flo
         radius = pinHeight
     )
 
-    rotate(pointerAngle, pivot = Offset(center.x, pivotY)) { // 🔹 ROTACIONANDO O PINO
+    rotate(pointerAngle, pivot = Offset(center.x, pivotY)) {
         val path = Path().apply {
             moveTo(center.x, pivotY + pinHeight)
             lineTo(center.x - pinWidth / 2, pivotY)
@@ -1427,6 +1316,9 @@ private fun DrawScope.drawSmallerGoldenBlackPin(radius: Float, pointerAngle: Flo
         )
     }
 }
+
+
+
 private fun DrawScope.drawGoldenBlackCenter(radius: Float) {
     val metallicGradient = Brush.radialGradient(
         colors = listOf(Color(0xFFFFD700), Color(0xFF424242)),
